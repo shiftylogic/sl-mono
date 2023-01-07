@@ -1,2 +1,1 @@
-# sl-mono
-All the Things
+# All the Things
