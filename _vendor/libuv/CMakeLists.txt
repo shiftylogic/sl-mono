@@ -31,6 +31,6 @@ file( ARCHIVE_EXTRACT
     DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-set( LIBUV_BUILD_SHARED OFF )
+option( LIBUV_BUILD_SHARED OFF )
 
 add_subdirectory( "libuv-${SL_LIBUV_VERSION}" )
