@@ -22,8 +22,19 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( vendor )
+project( unordered-dense-root )
 
-add_subdirectory( catch2 )
-add_subdirectory( unordered_dense )
+set( SL_UNORDERED_DENSE_VERSION "4.0.1" )
+
+file( ARCHIVE_EXTRACT
+    INPUT "${CMAKE_CURRENT_SOURCE_DIR}/unordered_dense-${SL_UNORDERED_DENSE_VERSION}.tar.gz"
+    DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+add_subdirectory( "unordered_dense-${SL_UNORDERED_DENSE_VERSION}" )
+
+#
+# Make sure the demo compiles
+#
+add_subdirectory( "demo" )
 
