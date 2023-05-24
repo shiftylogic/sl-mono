@@ -22,9 +22,15 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( vendor )
+project( libuv-root )
 
-add_subdirectory( catch2 )
-add_subdirectory( libuv)
-add_subdirectory( unordered_dense )
+set( SL_LIBUV_VERSION "1.45.0" )
 
+file( ARCHIVE_EXTRACT
+    INPUT "${CMAKE_CURRENT_SOURCE_DIR}/libuv-${SL_LIBUV_VERSION}.tar.gz"
+    DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+set( LIBUV_BUILD_SHARED OFF )
+
+add_subdirectory( "libuv-${SL_LIBUV_VERSION}" )
