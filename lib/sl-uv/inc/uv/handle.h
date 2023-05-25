@@ -25,9 +25,8 @@
 #ifndef __HANDLE_H_F0387A0F7A6549799F235DE19215DA6D__
 #define __HANDLE_H_F0387A0F7A6549799F235DE19215DA6D__
 
-#include <utility>
-
-#include <utils/noncopyable.h>
+#include <logging/logger.h>
+#include <utils/pointers.h>
 
 #include <uv.h>
 
@@ -35,68 +34,33 @@ namespace sl::uv
 {
 
     template< typename HandleType >
-    class Handle : sl::utils::NonCopyable
+    class Handle
     {
     public:
         Handle()
-            : _handle( new HandleType() )
-        {}
-
-        Handle( Handle&& h ) noexcept
-            : _handle( std::exchange( h._handle, nullptr ) )
-        {}
-
-        ~Handle() noexcept
+            : _handle { new HandleType }
         {
-            if ( _handle )
-                ::uv_close( reinterpret_cast< uv_handle_t* >( _handle ), &Handle::OnClose );
+            _handle->data = this;
         }
 
+        operator HandleType*() const noexcept { return _handle.get(); }
 
-        Handle& operator=( Handle&& h ) noexcept
-        {
-            if ( this != &h )
-            {
-                if ( _handle )
-                    ::uv_close( reinterpret_cast< uv_handle_t* >( _handle ), &Handle::OnClose );
-
-                _handle = std::exchange( h._handle, nullptr );
-            }
-
-            return *this;
-        }
-
-        operator HandleType*() const noexcept { return _handle; }
+        void Close() { _handle.reset(); }
 
         template< typename T >
-        T* Data()
+        static T* Self( HandleType* handle )
         {
-            return static_cast< T* >( _handle->data );
+            return static_cast< T* >( handle->data );
         }
 
-        template< typename T >
-        void Data( T* data )
-        {
-            _handle->data = data;
-        }
-
-
-        /**
-         * Public static methods
-         **/
-
-        template< typename T >
-        static T* Self( HandleType* h )
-        {
-            return static_cast< T* >( h->data );
-        }
 
     private:
-        /**
-         * Private static methods
-         **/
+        static void CloseInternal( HandleType* h )
+        {
+            ::uv_close( reinterpret_cast< uv_handle_t* >( h ), &Handle::OnClosed );
+        }
 
-        static void OnClose( uv_handle_t* h )
+        static void OnClosed( uv_handle_t* h )
         {
             // Handle closing is asynchronous. When it is complete, then we can delete
             // the underlying type
@@ -104,10 +68,8 @@ namespace sl::uv
         }
 
 
-        /**
-         * Private member data
-         **/
-        HandleType* _handle;
+    protected:
+        sl::utils::custom_unique_ptr< HandleType, Handle::CloseInternal > _handle;
     };
 
 }   // namespace sl::uv

@@ -33,7 +33,7 @@ namespace sl::uv
 {
 
     template< typename Callable >
-    class Timer
+    class Timer : Handle< uv_timer_t >
     {
     public:
         Timer( Loop& loop, uint64_t timeout, Callable fn )
@@ -43,19 +43,19 @@ namespace sl::uv
         Timer( Loop& loop, uint64_t timeout, uint64_t repeat, Callable fn )
             : _fn( fn )
         {
-            int res = ::uv_timer_init( loop, _timer );
-            uv::Error::ThrowIf( res, "uv_timer_init", "error initializing timer handle" );
+            uv::Error::ThrowIf( ::uv_timer_init( loop, *this ),
+                                "uv_timer_init",
+                                "error initializing timer handle" );
 
-            _timer.Data( this );
-
-            ::uv_timer_start( _timer, &Timer::OnTimer, timeout, repeat );
+            uv::Error::ThrowIf( ::uv_timer_start( *this, &Timer::OnTimer, timeout, repeat ),
+                                "uv_timer_start",
+                                "failed to start timer" );
         }
 
     private:
-        static void OnTimer( uv_timer_t* h ) { Handle< uv_timer_t >::Self< Timer >( h )->_fn(); }
+        static void OnTimer( uv_timer_t* h ) { Handle::Self< Timer >( h )->_fn(); }
 
     private:
-        Handle< uv_timer_t > _timer;
         Callable _fn;
     };
 

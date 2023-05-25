@@ -33,28 +33,28 @@ namespace sl::uv
 {
 
     template< typename Callable >
-    class Signaler
+    class Signaler : Handle< uv_signal_t >
     {
     public:
         Signaler( Loop& loop, Callable fn, int signum )
             : _fn( fn )
         {
-            int res = ::uv_signal_init( loop, _signal );
-            uv::Error::ThrowIf( res, "uv_signal_init", "error initializing signal handle" );
+            uv::Error::ThrowIf( ::uv_signal_init( loop, *this ),
+                                "uv_signal_init",
+                                "error initializing signal handle" );
 
-            _signal.Data( this );
-
-            ::uv_signal_start( _signal, &Signaler::OnSignal, signum );
+            uv::Error::ThrowIf( ::uv_signal_start( *this, &Signaler::OnSignal, signum ),
+                                "uv_signal_start",
+                                "failed to start watching signal" );
         }
 
     private:
         static void OnSignal( uv_signal_t* h, int /* signum */ )
         {
-            Handle< uv_signal_t >::Self< Signaler >( h )->_fn();
+            Handle::Self< Signaler >( h )->_fn();
         }
 
     private:
-        Handle< uv_signal_t > _signal;
         Callable _fn;
     };
 

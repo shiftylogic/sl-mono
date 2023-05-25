@@ -55,3 +55,56 @@ TEST_CASE( "UV Idler executes each loop iteration", "[uv]" )
     REQUIRE( completed );
     REQUIRE( count == 10 );
 }
+
+TEST_CASE( "UV Loop outlives Idler", "[uv]" )
+{
+    std::atomic< int > count { 0 };
+    std::atomic< int > hcount { 0 };
+
+    {
+        sl::uv::Loop loop;
+        {
+            sl::uv::Idler idler( loop, [&count]() { ++count; } );
+            loop.Run( sl::uv::Loop::RunMode::Once );
+        }
+
+        ::uv_walk(
+            loop,
+            []( uv_handle_s*, void* p ) { ++*static_cast< std::atomic< int >* >( p ); },
+            &hcount );
+        REQUIRE( hcount == 1 );
+    }
+
+    REQUIRE( hcount == 1 );
+    REQUIRE( count == 1 );
+}
+
+TEST_CASE( "UV Idler outlives Loop", "[uv]" )
+{
+    std::atomic< int > count { 0 };
+
+    auto loop  = std::make_unique< sl::uv::Loop >();
+    auto idler = sl::uv::Idler { *loop, [&]() { count++; } };
+
+    loop->Run( sl::uv::Loop::RunMode::Once );
+    REQUIRE( count == 1 );
+
+    loop.reset();
+    REQUIRE( count == 1 );
+}
+
+TEST_CASE( "UV Idler movable", "[uv]" )
+{
+    std::atomic< int > count { 0 };
+
+    {
+        sl::uv::Loop loop;
+        sl::uv::Idler idler { loop, [&]() { count++; } };
+        sl::uv::Idler idler2 { std::move( idler ) };
+
+        loop.Run( sl::uv::Loop::RunMode::Once );
+        REQUIRE( count == 1 );
+    }
+
+    REQUIRE( count == 1 );
+}

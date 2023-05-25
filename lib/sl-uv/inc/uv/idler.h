@@ -32,23 +32,24 @@ namespace sl::uv
 {
 
     template< typename Callable >
-    class Idler
+    class Idler : Handle< uv_idle_t >
     {
     public:
         Idler( Loop& loop, Callable fn )
             : _fn( fn )
         {
-            ::uv_idle_init( loop, _idle );
-            _idle.Data( this );
+            uv::Error::ThrowIf(
+                ::uv_idle_init( loop, *this ), "uv_idle_init", "failed to initialize idle handle" );
 
-            ::uv_idle_start( _idle, &Idler::OnExecute );
+            uv::Error::ThrowIf( ::uv_idle_start( *this, &Idler::OnExecute ),
+                                "uv_idle_start",
+                                "failed to start idle polling" );
         }
 
     private:
-        static void OnExecute( uv_idle_t* h ) { Handle< uv_idle_t >::Self< Idler >( h )->_fn(); }
+        static void OnExecute( uv_idle_t* h ) { Handle::Self< Idler >( h )->_fn(); }
 
     private:
-        Handle< uv_idle_t > _idle;
         Callable _fn;
     };
 

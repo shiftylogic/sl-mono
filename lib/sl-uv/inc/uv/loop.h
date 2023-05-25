@@ -48,14 +48,17 @@ namespace sl::uv
         Loop()
         {
             uv::Error::ThrowIf(
-                uv_loop_init( &_loop ), "uv_loop_init", "error initializing uv loop" );
+                ::uv_loop_init( &_loop ), "uv_loop_init", "error initializing uv loop" );
         }
 
         ~Loop() noexcept
         {
+            // Ensure all handles related to this loop are closed
+            ::uv_walk( &_loop, &Loop::OnWalk, nullptr );
+
             // We need to purge the UV loop to catch any handle closes
-            while ( ::uv_loop_alive( &_loop ) && ::uv_run( &_loop, UV_RUN_ONCE ) )
-                ;
+            uv::Error::LogIf(
+                ::uv_run( &_loop, UV_RUN_DEFAULT ), "uv_run", "failed drain loop on teardown" );
 
             // Now shutdown the loop
             uv::Error::LogIf(
@@ -70,6 +73,32 @@ namespace sl::uv
         }
 
         void Stop() { ::uv_stop( &_loop ); }
+
+    private:
+        static void OnWalk( uv_handle_t* h, void* )
+        {
+            if ( ::uv_is_closing( h ) )
+                return;
+
+            // The internal UV library does not use data and all of our wrapped handles do,
+            // so this is not an object / handle that we manage.
+            if ( !h->data )
+                return;
+
+#define SL_CLOSE_HANDLE( uc, lc )                                                                  \
+case UV_##uc:                                                                                      \
+    static_cast< Handle< uv_##lc##_t >* >( h->data )->Close();                                     \
+    break;
+
+            switch ( h->type )
+            {
+                UV_HANDLE_TYPE_MAP( SL_CLOSE_HANDLE )
+            default:
+                SL_WARN( "Undefined handle type" );
+            }
+
+#undef SL_CLOSE_HANDLE
+        }
 
     private:
         uv_loop_t _loop;

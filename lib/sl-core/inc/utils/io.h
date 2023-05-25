@@ -46,7 +46,7 @@ namespace sl::utils
     {
 #if defined( _WIN32 )
         std::array< char, MAX_PATH > buf;
-        DWORD len = GetModuleFileNameA( NULL, &buf[0], MAX_PATH );
+        DWORD len = GetModuleFileNameA( nullptr, &buf[0], MAX_PATH );
         if ( len == 0 )
             throw std::runtime_error( "failed 'GetModuleFileName' call" );
         return std::filesystem::path( &buf[0] );
