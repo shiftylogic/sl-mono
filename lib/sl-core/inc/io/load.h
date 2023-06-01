@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2023 Robert Anderson
+ * Copyright (c) 2023-present Robert Anderson
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,9 @@
  * SOFTWARE.
  */
 
-#ifndef __IO_H_F9612BABF26B46F8869C646386B65F27__
-#define __IO_H_F9612BABF26B46F8869C646386B65F27__
+#ifndef __LOAD_H_F9612BABF26B46F8869C646386B65F27__
+#define __LOAD_H_F9612BABF26B46F8869C646386B65F27__
 
-#include <array>
 #include <filesystem>
 #include <fstream>
 #include <vector>
@@ -39,39 +38,8 @@
 #    include <sys/syslimits.h>
 #endif
 
-namespace sl::utils
+namespace sl::io
 {
-
-    std::filesystem::path ExecutablePath()
-    {
-#if defined( _WIN32 )
-        std::array< char, MAX_PATH > buf;
-        DWORD len = GetModuleFileNameA( nullptr, &buf[0], MAX_PATH );
-        if ( len == 0 )
-            throw std::runtime_error( "failed 'GetModuleFileName' call" );
-        return std::filesystem::path( &buf[0] );
-
-#elif defined( __linux__ )
-        std::array< char, PATH_MAX > buf;
-        int len = readlink( "/proc/self/exe", &buf[0], sizeof( buf ) - 1 );
-        if ( len == -1 )
-            throw std::runtime_error( "could not read '/proc/self/exe'" );
-        buf[len] = '\0';
-        return std::filesystem::path( &buf[0] );
-
-#elif defined( __APPLE__ )
-        std::array< char, PATH_MAX > buf;
-        unsigned int bufSize = PATH_MAX;
-        if ( _NSGetExecutablePath( &buf[0], &bufSize ) )
-            throw std::runtime_error( "failed to get executable path" );
-        return std::filesystem::path( &buf[0] );
-
-#else
-#    error Unsupported platform
-#endif
-    }
-
-    std::filesystem::path BaseDirectory() { return ExecutablePath().parent_path(); }
 
     template< typename T >
     std::vector< T > LoadFile( const char* filename )
@@ -99,6 +67,6 @@ namespace sl::utils
         return LoadFile< T >( filePath.c_str() );
     }
 
-}   // namespace sl::utils
+}   // namespace sl::io
 
-#endif /* __IO_H_F9612BABF26B46F8869C646386B65F27__ */
+#endif /* __LOAD_H_F9612BABF26B46F8869C646386B65F27__ */
