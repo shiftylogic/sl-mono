@@ -22,54 +22,50 @@
  * SOFTWARE.
  */
 
-#ifndef __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__
-#define __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__
+#ifndef __MAPPED_VIEW_H_2C54890D693F4B339888C90AC76F5834__
+#define __MAPPED_VIEW_H_2C54890D693F4B339888C90AC76F5834__
 
-#include <stdexcept>
-#include <uv.h>
+#define WIN32_LEAN_AND_MEAN
+#define _WIN32_WINNT
 
-#include <logging/logger.h>
+#include <windows.h>
 
-namespace sl::uv
+#include <memory>
+
+#include "../error.h"
+
+namespace sl::io
 {
 
-    class Error : public std::runtime_error
+    struct MappedView : sl::utils::NonCopyable
     {
     public:
-        Error( const char* api, const char* message, int code )
-            : std::runtime_error { message }
-            , _api { api }
-            , _code { code }
-        {}
-
-        void Log() const { LogIf( _code, _api, what() ); }
-
-        static void LogIf( int code, const char* apiName, const char* message )
+        MappedView( HANDLE hMapping, size_t offset, size_t size )
+            : _size { size }
         {
-            if ( code == 0 )
-                return;
+            auto low  = static_cast< DWORD >( offset & 0xffffffff );
+            auto high = static_cast< DWORD >( offset >> 32 );
 
-            SL_ERROR( "*** UV ERROR *** '%s' failed: %s (Error: %d / %s) - %s\n",
-                      apiName,
-                      message,
-                      code,
-                      ::uv_err_name( code ),
-                      ::uv_strerror( code ) );
+            _view = ::MapViewOfFile( hMapping, FILE_MAP_READ, high, low, size );
+            io::Error::ThrowIf(
+                _view == nullptr, "MapViewOfFile", ::GetLastError(), "failed to map view" );
         }
 
-        static void ThrowIf( int code, const char* apiName, const char* message )
+        ~MappedView() noexcept
         {
-            if ( code == 0 )
-                return;
+            if ( _view != nullptr )
+                ::UnMapViewOfFileE( _view );
 
-            throw Error( apiName, message, code );
+            _view = nullptr;
+            _size = 0;
         }
 
     private:
-        const char* _api;
-        int _code;
+        size_t _size;
+        void* _view;
     };
 
-}   // namespace sl::uv
 
-#endif /* __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__ */
+}   // namespace sl::io
+
+#endif /* __MAPPED_VIEW_H_2C54890D693F4B339888C90AC76F5834__ */

@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2023 Robert Anderson
+ * Copyright (c) 2023-present Robert Anderson
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,22 +22,29 @@
  * SOFTWARE.
  */
 
-#ifndef __LAZY_H_C394AA8C06F347DCB57004A53C3B4286__
-#define __LAZY_H_C394AA8C06F347DCB57004A53C3B4286__
+#ifndef __MAPPED_FILE_H_30E530145D4241DEAC960482AF936880__
+#define __MAPPED_FILE_H_30E530145D4241DEAC960482AF936880__
 
-namespace sl::utils
+#include "error.h"
+
+namespace sl::io
 {
 
-    template< typename T >
-    struct Lazy
+    enum class CacheHint
     {
-        T& Get()
-        {
-            static T instance;
-            return instance;
-        }
+        Default,
+        Random,
+        Sequential,
     };
 
-}   // namespace sl::utils
+}
 
-#endif /* __LAZY_H_C394AA8C06F347DCB57004A53C3B4286__ */
+#if defined( _WIN32 )
+#    include "win/mapped-file.h"
+#elif defined( __linux__ ) || defined( __APPLE__ )
+#    include "unix/mapped-file.h"
+#else
+#    error File mapping / views not implememented for the target platform.
+#endif
+
+#endif /* __MAPPED_FILE_H_30E530145D4241DEAC960482AF936880__ */

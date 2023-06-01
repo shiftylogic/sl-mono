@@ -22,54 +22,43 @@
  * SOFTWARE.
  */
 
-#ifndef __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__
-#define __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__
+#ifndef __ERROR_H_3B53E4DB5D6142259E8C52A7BFD4F9B9__
+#define __ERROR_H_3B53E4DB5D6142259E8C52A7BFD4F9B9__
 
 #include <stdexcept>
-#include <uv.h>
 
-#include <logging/logger.h>
+#include <utils/strings.h>
 
-namespace sl::uv
+namespace sl::io
 {
 
     class Error : public std::runtime_error
     {
     public:
-        Error( const char* api, const char* message, int code )
-            : std::runtime_error { message }
-            , _api { api }
-            , _code { code }
+        Error( const char* api, int code, const char* message )
+            : std::runtime_error { io::Error::MakeMessage( api, code, message ) }
         {}
 
-        void Log() const { LogIf( _code, _api, what() ); }
-
-        static void LogIf( int code, const char* apiName, const char* message )
+        static void Throw( const char* api, int code, const char* message = nullptr )
         {
-            if ( code == 0 )
-                return;
-
-            SL_ERROR( "*** UV ERROR *** '%s' failed: %s (Error: %d / %s) - %s\n",
-                      apiName,
-                      message,
-                      code,
-                      ::uv_err_name( code ),
-                      ::uv_strerror( code ) );
+            throw io::Error { api, code, message };
         }
 
-        static void ThrowIf( int code, const char* apiName, const char* message )
+        static void
+        ThrowIf( bool condition, const char* api, int code, const char* message = nullptr )
         {
-            if ( code == 0 )
-                return;
-
-            throw Error( apiName, message, code );
+            if ( condition )
+                Throw( api, code, message );
         }
 
     private:
-        const char* _api;
-        int _code;
+        static std::string MakeMessage( const char* api, int code, const char* message )
+        {
+            const char* msg = ( nullptr == message ) ? "<unspecified>" : message;
+            return sl::utils::FormatString( "IO Error (%s): [%d] %s", api, code, msg );
+        }
     };
 
-}   // namespace sl::uv
+}   // namespace sl::io
 
-#endif /* __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__ */
+#endif /* __ERROR_H_3B53E4DB5D6142259E8C52A7BFD4F9B9__ */
