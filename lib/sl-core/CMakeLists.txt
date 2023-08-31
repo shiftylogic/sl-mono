@@ -30,6 +30,10 @@ target_include_directories( ${PROJECT_NAME} INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
+target_link_libraries( ${PROJECT_NAME} INTERFACE
+    json
+)
+
 # Only necessary if this switches from INTERFACE to STATIC
 # enable_warnings( ${PROJECT_NAME} )
 
@@ -40,6 +44,7 @@ target_include_directories( ${PROJECT_NAME} INTERFACE
 
 set( SLCORE_LIB_TEST_SRCS
     "tests/allocator-test.cpp"
+    "tests/config-test.cpp"
     "tests/lazy-test.cpp"
     "tests/strings-test.cpp"
 )
