@@ -44,6 +44,7 @@ target_link_libraries( ${PROJECT_NAME} INTERFACE
 
 set( SLCORE_LIB_TEST_SRCS
     "tests/allocator-test.cpp"
+    "tests/deferred-test.cpp"
     "tests/config-test.cpp"
     "tests/lazy-test.cpp"
     "tests/strings-test.cpp"

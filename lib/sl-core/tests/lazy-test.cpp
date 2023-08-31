@@ -26,7 +26,7 @@
 
 #include <utils/lazy.h>
 
-TEST_CASE( "Lazy no args", "[utils]" )
+TEST_CASE( "Lazy no args", "[utils][lazy]" )
 {
     static size_t ctor_called = 0;
     static size_t dtor_called = 0;
@@ -51,7 +51,7 @@ TEST_CASE( "Lazy no args", "[utils]" )
     REQUIRE( dtor_called == 1 );
 }
 
-TEST_CASE( "Lazy w/ args", "[utils]" )
+TEST_CASE( "Lazy w/ args", "[utils][lazy]" )
 {
     static size_t ctor_called = 0;
     static size_t dtor_called = 0;
