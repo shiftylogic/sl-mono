@@ -22,9 +22,38 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( sl-libs )
+project( sl-data )
 
-add_subdirectory( sl-core )
-add_subdirectory( sl-data )
-add_subdirectory( sl-uv )
+add_library( ${PROJECT_NAME} INTERFACE )
 
+target_include_directories( ${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+target_link_libraries( ${PROJECT_NAME} INTERFACE
+    sqlite
+    sl-core
+)
+
+# enable_warnings( ${PROJECT_NAME} )
+
+add_example(
+    NAME play-demo
+    SOURCES examples/play-demo.cpp
+    LIBRARIES sl-core ${PROJECT_NAME}
+)
+
+
+###################
+#
+# Build tests
+
+set( SLDATA_LIB_TEST_SRCS
+    #    tests/-test.cpp
+)
+
+build_tests(
+    NAME data-tests
+    SOURCES ${SLDATA_LIB_TEST_SRCS}
+    LIBRARIES sl-core ${PROJECT_NAME}
+)
