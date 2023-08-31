@@ -39,6 +39,7 @@ target_include_directories( ${PROJECT_NAME} INTERFACE
 # Build tests
 
 set( SLCORE_LIB_TEST_SRCS
+    "tests/lazy-test.cpp"
     "tests/strings-test.cpp"
 )
 
