@@ -22,60 +22,67 @@
  * SOFTWARE.
  */
 
-#ifndef __LOOP_H_9EF25771C17049F494239E8FFFE1516C__
-#define __LOOP_H_9EF25771C17049F494239E8FFFE1516C__
+#ifndef __LOOP_H_FF7BCFBB6A214C2791A1B7DCC02C4273__
+#define __LOOP_H_FF7BCFBB6A214C2791A1B7DCC02C4273__
 
 #include <uv.h>
 
 #include <utils/noncopyable.h>
 
-#include "error.h"
+#include "./error.h"
+#include "./handle.h"
 
 namespace sl::uv
 {
 
-    class Loop : sl::utils::NonCopyable
+    enum class run_mode
+    {
+        normal  = UV_RUN_DEFAULT,
+        once    = UV_RUN_ONCE,
+        no_wait = UV_RUN_NOWAIT,
+    };
+
+
+    template< typename Logger >
+    class loop : sl::utils::noncopyable
     {
     public:
-        enum class RunMode
+        explicit loop( Logger& logger )
+            : _logger( logger )
         {
-            Default = UV_RUN_DEFAULT,
-            Once    = UV_RUN_ONCE,
-            NoWait  = UV_RUN_NOWAIT,
-        };
-
-    public:
-        Loop()
-        {
-            uv::Error::ThrowIf(
+            uv::error::throw_if(
                 ::uv_loop_init( &_loop ), "uv_loop_init", "error initializing uv loop" );
         }
 
-        ~Loop() noexcept
+        ~loop() noexcept
         {
             // Ensure all handles related to this loop are closed
-            ::uv_walk( &_loop, &Loop::OnWalk, nullptr );
+            ::uv_walk( &_loop, &loop::on_walk, nullptr );
 
             // We need to purge the UV loop to catch any handle closes
-            uv::Error::LogIf(
-                ::uv_run( &_loop, UV_RUN_DEFAULT ), "uv_run", "failed drain loop on teardown" );
+            uv::error::log_if( _logger,
+                               ::uv_run( &_loop, UV_RUN_DEFAULT ),
+                               "uv_run",
+                               "failed drain loop on teardown" );
 
             // Now shutdown the loop
-            uv::Error::LogIf(
-                ::uv_loop_close( &_loop ), "uv_loop_close", "failed tearing down the uv loop" );
+            uv::error::log_if( _logger,
+                               ::uv_loop_close( &_loop ),
+                               "uv_loop_close",
+                               "failed tearing down the uv loop" );
         }
 
         operator uv_loop_t*() noexcept { return &_loop; }
 
-        void Run( RunMode mode = RunMode::Default )
+        void run( run_mode mode = run_mode::normal )
         {
             ::uv_run( &_loop, static_cast< uv_run_mode >( mode ) );
         }
 
-        void Stop() { ::uv_stop( &_loop ); }
+        void stop() { ::uv_stop( &_loop ); }
 
     private:
-        static void OnWalk( uv_handle_t* h, void* )
+        static void on_walk( uv_handle_t* h, void* )
         {
             if ( ::uv_is_closing( h ) )
                 return;
@@ -87,23 +94,24 @@ namespace sl::uv
 
 #define SL_CLOSE_HANDLE( uc, lc )                                                                  \
 case UV_##uc:                                                                                      \
-    static_cast< Handle< uv_##lc##_t >* >( h->data )->Close();                                     \
+    static_cast< handle< uv_##lc##_t >* >( h->data )->close();                                     \
     break;
 
             switch ( h->type )
             {
                 UV_HANDLE_TYPE_MAP( SL_CLOSE_HANDLE )
             default:
-                SL_WARN( "Undefined handle type" );
+                break;
             }
 
 #undef SL_CLOSE_HANDLE
         }
 
     private:
+        Logger& _logger;
         uv_loop_t _loop;
     };
 
 }   // namespace sl::uv
 
-#endif /* __LOOP_H_9EF25771C17049F494239E8FFFE1516C__ */
+#endif /* __LOOP_H_FF7BCFBB6A214C2791A1B7DCC02C4273__ */

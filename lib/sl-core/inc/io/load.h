@@ -42,7 +42,7 @@ namespace sl::io
 {
 
     template< typename T >
-    std::vector< T > LoadFile( const char* filename )
+    std::vector< T > load_file( const char* filename )
     {
         std::ifstream f( filename, std::ios::ate | std::ios::binary );
         if ( !f.is_open() )
@@ -62,9 +62,9 @@ namespace sl::io
     }
 
     template< typename T >
-    std::vector< T > LoadFile( std::filesystem::path filePath )
+    std::vector< T > load_file( std::filesystem::path filePath )
     {
-        return LoadFile< T >( filePath.c_str() );
+        return load_file< T >( filePath.c_str() );
     }
 
 }   // namespace sl::io

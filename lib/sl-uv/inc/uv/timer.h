@@ -22,38 +22,40 @@
  * SOFTWARE.
  */
 
-#ifndef __TIMER_H_55C29E1533904525B82D2EF18FADFD65__
-#define __TIMER_H_55C29E1533904525B82D2EF18FADFD65__
+#ifndef __TIMER_H_24A31FF5F5134B87934C41EDECFD4106__
+#define __TIMER_H_24A31FF5F5134B87934C41EDECFD4106__
 
-#include "error.h"
-#include "handle.h"
-#include "loop.h"
+#include <uv.h>
+
+#include "./error.h"
+#include "./handle.h"
+#include "./loop.h"
 
 namespace sl::uv
 {
 
-    template< typename Callable >
-    class Timer : Handle< uv_timer_t >
+    template< typename Logger, typename Callable >
+    class timer : handle< uv_timer_t >
     {
     public:
-        Timer( Loop& loop, uint64_t timeout, Callable fn )
-            : Timer( loop, timeout, 0, fn )
+        explicit timer( uv::loop< Logger >& loop, uint64_t timeout, Callable fn )
+            : timer( loop, timeout, 0, fn )
         {}
 
-        Timer( Loop& loop, uint64_t timeout, uint64_t repeat, Callable fn )
+        explicit timer( uv::loop< Logger >& loop, uint64_t timeout, uint64_t repeat, Callable fn )
             : _fn( fn )
         {
-            uv::Error::ThrowIf( ::uv_timer_init( loop, *this ),
-                                "uv_timer_init",
-                                "error initializing timer handle" );
+            uv::error::throw_if( ::uv_timer_init( loop, *this ),
+                                 "uv_timer_init",
+                                 "error initializing timer handle" );
 
-            uv::Error::ThrowIf( ::uv_timer_start( *this, &Timer::OnTimer, timeout, repeat ),
-                                "uv_timer_start",
-                                "failed to start timer" );
+            uv::error::throw_if( ::uv_timer_start( *this, &timer::on_timer, timeout, repeat ),
+                                 "uv_timer_start",
+                                 "failed to start timer" );
         }
 
     private:
-        static void OnTimer( uv_timer_t* h ) { Handle::Self< Timer >( h )->_fn(); }
+        static void on_timer( uv_timer_t* h ) { handle::self< timer >( h )->_fn(); }
 
     private:
         Callable _fn;
@@ -61,4 +63,4 @@ namespace sl::uv
 
 }   // namespace sl::uv
 
-#endif /* __TIMER_H_55C29E1533904525B82D2EF18FADFD65__ */
+#endif /* __TIMER_H_24A31FF5F5134B87934C41EDECFD4106__ */

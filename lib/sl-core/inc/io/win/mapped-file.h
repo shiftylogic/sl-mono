@@ -41,26 +41,27 @@ namespace sl::io
      * This is meant as a placeholder for now to not lose information.
      */
 
-    struct MappedFile : sl::utils::NonCopyable
+    struct mapped_file : sl::utils::noncopyable
     {
     public:
-        MappedFile( const char* name )
+        mapped_file( const char* name )
             : _file { INVALID_HANDLE_VALUE }
             , _mapping { nullptr }
         {
             _file = ::CreateFileA(
                 name, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, hint, nullptr );
-            io::Error::ThrowIf( hFile == INVALID_HANDLE_VALUE,
-                                "CreateFile",
-                                ::GetLastError(),
-                                "failed to open file" );
+            io::error::throw_if( hFile == INVALID_HANDLE_VALUE,
+                                 "CreateFile",
+                                 ::GetLastError(),
+                                 "failed to open file" );
 
             _mapping = ::CreateFileMapping( hFile, nullptr, PAGE_READONLY, 0, 0, nullptr );
             if ( _mapping == nullptr )
             {
                 auto err = ::GetLastError();
                 ::CloseHandle( _file );
-                io::Error::Throw( "CreateFileMapping", err, "failed to create file mapping" );
+                io::error::throw_if(
+                    true, "CreateFileMapping", err, "failed to create file mapping" );
             }
 
             LARGE_INTEGER size;
@@ -69,13 +70,13 @@ namespace sl::io
                 auto err = ::GetLastError();
                 ::CloseHandle( _mapping );
                 ::CloseHandle( _file );
-                io::Error::Throw( "GetFileSizeEx", err, "failed to get file size" );
+                io::error::throw_if( true, "GetFileSizeEx", err, "failed to get file size" );
             }
 
             _size = static_cast< size_t >( size.QuadPart );
         }
 
-        ~MappedFile() noexcept
+        ~mapped_file() noexcept
         {
             if ( _mapping != nullptr )
                 ::CloseHandle( _mapping );
@@ -88,11 +89,11 @@ namespace sl::io
             _size    = 0;
         }
 
-        size_t Size() const noexcept { return _size; }
+        size_t size() const noexcept { return _size; }
 
-        MappedView MapView( size_t offset, size_t size ) const
+        mapped_view map_view( size_t offset, size_t size ) const
         {
-            return MappedView( _mapping, offset, size );
+            return mapped_view( _mapping, offset, size );
         }
 
     private:

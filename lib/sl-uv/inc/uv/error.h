@@ -22,47 +22,50 @@
  * SOFTWARE.
  */
 
-#ifndef __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__
-#define __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__
+#ifndef __ERROR_H_7B71C74D57224A61B242BD41E35C53FE__
+#define __ERROR_H_7B71C74D57224A61B242BD41E35C53FE__
 
 #include <stdexcept>
 #include <uv.h>
 
-#include <logging/logger.h>
-
 namespace sl::uv
 {
 
-    class Error : public std::runtime_error
+    class error : public std::runtime_error
     {
     public:
-        Error( const char* api, const char* message, int code )
+        error( const char* api, const char* message, int code )
             : std::runtime_error { message }
             , _api { api }
             , _code { code }
         {}
 
-        void Log() const { LogIf( _code, _api, what() ); }
-
-        static void LogIf( int code, const char* apiName, const char* message )
+        template< typename Logger >
+        void log( Logger& logger ) const
         {
-            if ( code == 0 )
-                return;
-
-            SL_ERROR( "*** UV ERROR *** '%s' failed: %s (Error: %d / %s) - %s\n",
-                      apiName,
-                      message,
-                      code,
-                      ::uv_err_name( code ),
-                      ::uv_strerror( code ) );
+            log_if( logger, _code, _api, what() );
         }
 
-        static void ThrowIf( int code, const char* apiName, const char* message )
+        template< typename Logger >
+        static void log_if( Logger& logger, int code, const char* apiName, const char* message )
         {
             if ( code == 0 )
                 return;
 
-            throw Error( apiName, message, code );
+            logger.error( "*** UV ERROR *** '%s' failed: %s (Error: %d / %s) - %s",
+                          apiName,
+                          message,
+                          code,
+                          ::uv_err_name( code ),
+                          ::uv_strerror( code ) );
+        }
+
+        static void throw_if( int code, const char* apiName, const char* message )
+        {
+            if ( code == 0 )
+                return;
+
+            throw error( apiName, message, code );
         }
 
     private:
@@ -72,4 +75,4 @@ namespace sl::uv
 
 }   // namespace sl::uv
 
-#endif /* __UVERROR_H_9A908BFF019A43EFA755329EBB1A282F__ */
+#endif /* __ERROR_H_7B71C74D57224A61B242BD41E35C53FE__ */

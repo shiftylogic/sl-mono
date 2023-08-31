@@ -22,36 +22,38 @@
  * SOFTWARE.
  */
 
-#ifndef __SIGNALER_H_E7618F793B464BCBA9EBB6D70A11C562__
-#define __SIGNALER_H_E7618F793B464BCBA9EBB6D70A11C562__
+#ifndef __SIGNALER_H_3FDE59DDA15C44A8926FE46B3BE4F3C2__
+#define __SIGNALER_H_3FDE59DDA15C44A8926FE46B3BE4F3C2__
 
-#include "error.h"
-#include "handle.h"
-#include "loop.h"
+#include <uv.h>
+
+#include "./error.h"
+#include "./handle.h"
+#include "./loop.h"
 
 namespace sl::uv
 {
 
-    template< typename Callable >
-    class Signaler : Handle< uv_signal_t >
+    template< typename Logger, typename Callable >
+    class signaler : handle< uv_signal_t >
     {
     public:
-        Signaler( Loop& loop, Callable fn, int signum )
+        explicit signaler( uv::loop< Logger >& loop, Callable fn, int signum )
             : _fn( fn )
         {
-            uv::Error::ThrowIf( ::uv_signal_init( loop, *this ),
-                                "uv_signal_init",
-                                "error initializing signal handle" );
+            uv::error::throw_if( ::uv_signal_init( loop, *this ),
+                                 "uv_signal_init",
+                                 "error initializing signal handle" );
 
-            uv::Error::ThrowIf( ::uv_signal_start( *this, &Signaler::OnSignal, signum ),
-                                "uv_signal_start",
-                                "failed to start watching signal" );
+            uv::error::throw_if( ::uv_signal_start( *this, &signaler::on_signal, signum ),
+                                 "uv_signal_start",
+                                 "failed to start watching signal" );
         }
 
     private:
-        static void OnSignal( uv_signal_t* h, int /* signum */ )
+        static void on_signal( uv_signal_t* h, int /* signum */ )
         {
-            Handle::Self< Signaler >( h )->_fn();
+            handle::self< signaler >( h )->_fn();
         }
 
     private:
@@ -60,4 +62,4 @@ namespace sl::uv
 
 }   // namespace sl::uv
 
-#endif /* __SIGNALER_H_E7618F793B464BCBA9EBB6D70A11C562__ */
+#endif /* __SIGNALER_H_3FDE59DDA15C44A8926FE46B3BE4F3C2__ */

@@ -37,21 +37,21 @@
 namespace sl::io
 {
 
-    struct MappedView : sl::utils::NonCopyable
+    struct mapped_view : sl::utils::noncopyable
     {
     public:
-        MappedView( HANDLE hMapping, size_t offset, size_t size )
+        mapped_view( HANDLE hMapping, size_t offset, size_t size )
             : _size { size }
         {
             auto low  = static_cast< DWORD >( offset & 0xffffffff );
             auto high = static_cast< DWORD >( offset >> 32 );
 
             _view = ::MapViewOfFile( hMapping, FILE_MAP_READ, high, low, size );
-            io::Error::ThrowIf(
+            io::error::throw_if(
                 _view == nullptr, "MapViewOfFile", ::GetLastError(), "failed to map view" );
         }
 
-        ~MappedView() noexcept
+        ~mapped_view() noexcept
         {
             if ( _view != nullptr )
                 ::UnMapViewOfFileE( _view );

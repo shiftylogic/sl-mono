@@ -30,11 +30,11 @@
 namespace sl::io
 {
 
-    enum class CacheHint
+    enum class cache_hint
     {
-        Default,
-        Random,
-        Sequential,
+        none,
+        random,
+        sequential,
     };
 
 }

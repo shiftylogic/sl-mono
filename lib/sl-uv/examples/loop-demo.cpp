@@ -22,6 +22,9 @@
  * SOFTWARE.
  */
 
+#include <cstdlib>
+#include <stdexcept>
+
 #include <logging/logger.h>
 #include <uv/idler.h>
 #include <uv/signaler.h>
@@ -30,15 +33,24 @@
 namespace
 {
 
-    void IdleMe()
+    sl::logging::logger g_logger;
+
+    void idle_me()
     {
         static uint64_t c = 0;
         if ( ( ++c % 1000000 ) == 0 )
-            SL_INFO( "Idle..." );
+            g_logger.info( "Idle..." );
     }
 
-    void SayHello() { SL_INFO( "Hello" ); }
-    void SaySup() { SL_INFO( "What's up!" ); }
+    void say_hello()
+    {
+        g_logger.info( "Hello" );
+    }
+
+    void say_sup()
+    {
+        g_logger.info( "What's up!" );
+    }
 
 }   // namespace
 
@@ -46,38 +58,38 @@ int main()
 {
     try
     {
-        SL_INFO( "Initializing..." );
+        g_logger.info( "Initializing..." );
 
-        sl::uv::Loop loop;
-        sl::uv::Idler idler( loop, IdleMe );
-        sl::uv::Timer timer( loop, 2000, SayHello );
-        sl::uv::Timer timer2( loop, 1000, 3000, SaySup );
-        sl::uv::Signaler signaler(
+        sl::uv::loop loop( g_logger );
+        sl::uv::idler idler( loop, idle_me );
+        sl::uv::timer timer( loop, 2000, say_hello );
+        sl::uv::timer timer2( loop, 1000, 3000, say_sup );
+        sl::uv::signaler signaler(
             loop,
             [&loop]() {
-                SL_INFO( "Interrupted..." );
-                loop.Stop();
+                g_logger.info( "Interrupted..." );
+                loop.stop();
             },
             SIGINT );
 
-        SL_INFO( "Starting main loop..." );
-        loop.Run();
+        g_logger.info( "Starting main loop..." );
+        loop.run();
 
-        SL_INFO( "Shutting down..." );
+        g_logger.info( "Shutting down..." );
     }
-    catch ( const sl::uv::Error& ex )
+    catch ( const sl::uv::error& ex )
     {
-        ex.Log();
+        ex.log( g_logger );
     }
     catch ( const std::exception& ex )
     {
-        SL_ERROR( "[*** std::exception ***] %s", ex.what() );
+        g_logger.error( "[*** std::exception ***] %s", ex.what() );
     }
     catch ( ... )
     {
-        SL_ERROR( "[*** UNKNOWN EXCEPTION ***]" );
+        g_logger.error( "[*** UNKNOWN EXCEPTION ***]" );
     }
 
-    SL_INFO( "bye." );
+    g_logger.info( "bye." );
     return 0;
 }

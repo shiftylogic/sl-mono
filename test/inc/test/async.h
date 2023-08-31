@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2023 Robert Anderson
+ * Copyright (c) 2023-present Robert Anderson
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,18 +31,21 @@
 namespace sl::test
 {
 
-    static bool RunAsync( std::chrono::milliseconds wait, std::function< void() > fn )
+    static bool run_async( std::chrono::milliseconds wait, std::function< void() > fn )
     {
         auto task   = std::async( std::launch::async, fn );
         auto status = task.wait_for( wait );
+
         return status == std::future_status::ready;
     }
 
     template< typename T >
-    static std::tuple< bool, T > RunAsync( std::chrono::milliseconds wait, std::function< T() > fn )
+    static std::tuple< bool, T > run_async( std::chrono::milliseconds wait,
+                                            std::function< T() > fn )
     {
         auto task   = std::async( std::launch::async, fn );
         auto status = task.wait_for( wait );
+
         if ( status == std::future_status::ready )
             return std::make_tuple( true, task.get() );
         else

@@ -28,11 +28,11 @@
 namespace sl::utils
 {
 
-    struct NonCopyable
+    struct noncopyable
     {
-        NonCopyable()                     = default;
-        NonCopyable( const NonCopyable& ) = delete;
-        NonCopyable& operator=( const NonCopyable& ) = delete;
+        noncopyable()                                = default;
+        noncopyable( const noncopyable& )            = delete;
+        noncopyable& operator=( const noncopyable& ) = delete;
     };
 
 }   // namespace sl::utils

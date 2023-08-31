@@ -42,30 +42,18 @@ add_example(
     LIBRARIES sl-core ${PROJECT_NAME}
 )
 
-# add_example(
-#     NAME tcp-server
-#     SOURCES examples/tcp-server.cpp
-#     LIBRARIES sl-core ${PROJECT_NAME}
-# )
-
-# add_example(
-#     NAME echo-server
-#     SOURCES examples/echo-server.cpp
-#     LIBRARIES sl-core ${PROJECT_NAME}
-# )
-
 
 ###################
 #
 # Build tests
 
-set( SLCORE_LIB_TEST_SRCS
-    tests/idler_test.cpp
-    tests/timer_test.cpp
+set( SLUV_LIB_TEST_SRCS
+    tests/idler-test.cpp
+    tests/timer-test.cpp
 )
 
 build_tests(
     NAME uv-tests
-    SOURCES ${SLCORE_LIB_TEST_SRCS}
+    SOURCES ${SLUV_LIB_TEST_SRCS}
     LIBRARIES sl-core ${PROJECT_NAME}
 )

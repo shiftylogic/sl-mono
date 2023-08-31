@@ -22,22 +22,21 @@
  * SOFTWARE.
  */
 
-#ifndef __HANDLE_H_F0387A0F7A6549799F235DE19215DA6D__
-#define __HANDLE_H_F0387A0F7A6549799F235DE19215DA6D__
-
-#include <logging/logger.h>
-#include <utils/pointers.h>
+#ifndef __HANDLE_H_E5F9CEC25E0B4425A67C092E22D94942__
+#define __HANDLE_H_E5F9CEC25E0B4425A67C092E22D94942__
 
 #include <uv.h>
+
+#include <utils/pointers.h>
 
 namespace sl::uv
 {
 
     template< typename HandleType >
-    class Handle
+    class handle
     {
     public:
-        Handle()
+        explicit handle()
             : _handle { new HandleType }
         {
             _handle->data = this;
@@ -45,33 +44,32 @@ namespace sl::uv
 
         operator HandleType*() const noexcept { return _handle.get(); }
 
-        void Close() { _handle.reset(); }
+        void close() { _handle.reset(); }
 
         template< typename T >
-        static T* Self( HandleType* handle )
+        static T* self( HandleType* handle )
         {
             return static_cast< T* >( handle->data );
         }
 
 
     private:
-        static void CloseInternal( HandleType* h )
+        static void close_internal( HandleType* h )
         {
-            ::uv_close( reinterpret_cast< uv_handle_t* >( h ), &Handle::OnClosed );
+            ::uv_close( reinterpret_cast< uv_handle_t* >( h ), &handle::on_closed );
         }
 
-        static void OnClosed( uv_handle_t* h )
+        static void on_closed( uv_handle_t* h )
         {
             // Handle closing is asynchronous. When it is complete, then we can delete
             // the underlying type
             delete reinterpret_cast< HandleType* >( h );
         }
 
-
     protected:
-        sl::utils::custom_unique_ptr< HandleType, Handle::CloseInternal > _handle;
+        sl::utils::custom_unique_ptr< HandleType, handle::close_internal > _handle;
     };
 
 }   // namespace sl::uv
 
-#endif /* __HANDLE_H_F0387A0F7A6549799F235DE19215DA6D__ */
+#endif /* __HANDLE_H_E5F9CEC25E0B4425A67C092E22D94942__ */

@@ -25,18 +25,20 @@
 #include <catch2/catch.hpp>
 #include <test/async.h>
 
+#include <logging/logger.h>
 #include <uv/timer.h>
 
 using namespace std::chrono_literals;
 
-TEST_CASE( "UV Timer executes", "[uv]" )
+TEST_CASE( "UV timer executes", "[uv]" )
 {
-    auto [completed, count] = sl::test::RunAsync< int >( 2000ms, []() -> int {
+    auto [completed, count] = sl::test::run_async< int >( 2000ms, []() -> int {
         std::atomic< int > count { 0 };
-        sl::uv::Loop loop;
-        sl::uv::Timer timer( loop, 20, 0, [&]() { count++; } );
+        sl::logging::logger logger;
+        sl::uv::loop loop( logger );
+        sl::uv::timer timer( loop, 20, 0, [&]() { count++; } );
 
-        loop.Run( sl::uv::Loop::RunMode::Once );
+        loop.run( sl::uv::run_mode::once );
         return count;
     } );
 
@@ -44,17 +46,18 @@ TEST_CASE( "UV Timer executes", "[uv]" )
     REQUIRE( count == 1 );
 }
 
-TEST_CASE( "UV Timer repeats", "[uv]" )
+TEST_CASE( "UV timer repeats", "[uv]" )
 {
-    auto [completed, count] = sl::test::RunAsync< int >( 2000ms, []() -> int {
+    auto [completed, count] = sl::test::run_async< int >( 2000ms, []() -> int {
         std::atomic< int > count { 0 };
-        sl::uv::Loop loop;
-        sl::uv::Timer timer( loop, 20, 20, [&]() { count++; } );
+        sl::logging::logger logger;
+        sl::uv::loop loop( logger );
+        sl::uv::timer timer( loop, 20, 20, [&]() { count++; } );
 
-        loop.Run( sl::uv::Loop::RunMode::Once );
-        loop.Run( sl::uv::Loop::RunMode::Once );
-        loop.Run( sl::uv::Loop::RunMode::Once );
-        loop.Run( sl::uv::Loop::RunMode::Once );
+        loop.run( sl::uv::run_mode::once );
+        loop.run( sl::uv::run_mode::once );
+        loop.run( sl::uv::run_mode::once );
+        loop.run( sl::uv::run_mode::once );
 
         return count;
     } );

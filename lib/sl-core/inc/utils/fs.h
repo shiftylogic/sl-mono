@@ -40,18 +40,18 @@
 namespace sl::utils
 {
 
-    std::filesystem::path ExecutablePath()
+    std::filesystem::path executable_path()
     {
 #if defined( _WIN32 )
         std::array< char, MAX_PATH > buf;
-        DWORD len = GetModuleFileNameA( nullptr, &buf[0], MAX_PATH );
+        DWORD len = ::GetModuleFileNameA( nullptr, &buf[0], MAX_PATH );
         if ( len == 0 )
             throw std::runtime_error( "failed 'GetModuleFileName' call" );
         return std::filesystem::path( &buf[0] );
 
 #elif defined( __linux__ )
         std::array< char, PATH_MAX > buf;
-        int len = readlink( "/proc/self/exe", &buf[0], sizeof( buf ) - 1 );
+        int len = ::readlink( "/proc/self/exe", &buf[0], sizeof( buf ) - 1 );
         if ( len == -1 )
             throw std::runtime_error( "could not read '/proc/self/exe'" );
         buf[len] = '\0';
@@ -60,7 +60,7 @@ namespace sl::utils
 #elif defined( __APPLE__ )
         std::array< char, PATH_MAX > buf;
         unsigned int bufSize = PATH_MAX;
-        if ( _NSGetExecutablePath( &buf[0], &bufSize ) )
+        if ( ::_NSGetExecutablePath( &buf[0], &bufSize ) )
             throw std::runtime_error( "failed to get executable path" );
         return std::filesystem::path( &buf[0] );
 
@@ -69,7 +69,10 @@ namespace sl::utils
 #endif
     }
 
-    std::filesystem::path BaseDirectory() { return ExecutablePath().parent_path(); }
+    std::filesystem::path base_directory()
+    {
+        return executable_path().parent_path();
+    }
 
 }   // namespace sl::utils
 

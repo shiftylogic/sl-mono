@@ -22,32 +22,35 @@
  * SOFTWARE.
  */
 
-#ifndef __IDLER_H_45380EE7F20043AC8444CDC1891D2397__
-#define __IDLER_H_45380EE7F20043AC8444CDC1891D2397__
+#ifndef __IDLER_H_86F33456780F42A9BCC0889C3E285725__
+#define __IDLER_H_86F33456780F42A9BCC0889C3E285725__
 
-#include "handle.h"
-#include "loop.h"
+#include <uv.h>
+
+#include "./error.h"
+#include "./handle.h"
+#include "./loop.h"
 
 namespace sl::uv
 {
 
-    template< typename Callable >
-    class Idler : Handle< uv_idle_t >
+    template< typename Logger, typename Callable >
+    class idler : handle< uv_idle_t >
     {
     public:
-        Idler( Loop& loop, Callable fn )
+        explicit idler( uv::loop< Logger >& loop, Callable fn )
             : _fn( fn )
         {
-            uv::Error::ThrowIf(
+            uv::error::throw_if(
                 ::uv_idle_init( loop, *this ), "uv_idle_init", "failed to initialize idle handle" );
 
-            uv::Error::ThrowIf( ::uv_idle_start( *this, &Idler::OnExecute ),
-                                "uv_idle_start",
-                                "failed to start idle polling" );
+            uv::error::throw_if( ::uv_idle_start( *this, &idler::on_execute ),
+                                 "uv_idle_start",
+                                 "failed to start idle polling" );
         }
 
     private:
-        static void OnExecute( uv_idle_t* h ) { Handle::Self< Idler >( h )->_fn(); }
+        static void on_execute( uv_idle_t* h ) { handle::self< idler >( h )->_fn(); }
 
     private:
         Callable _fn;
@@ -55,4 +58,4 @@ namespace sl::uv
 
 }   // namespace sl::uv
 
-#endif /* __IDLER_H_45380EE7F20043AC8444CDC1891D2397__ */
+#endif /* __IDLER_H_86F33456780F42A9BCC0889C3E285725__ */

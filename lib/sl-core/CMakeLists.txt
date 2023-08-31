@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2023 Robert Anderson
+# Copyright (c) 2023-present Robert Anderson
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ target_include_directories( ${PROJECT_NAME} INTERFACE
 # Build tests
 
 set( SLCORE_LIB_TEST_SRCS
-    tests/strings_test.cpp
+    "tests/strings-test.cpp"
 )
 
 build_tests(

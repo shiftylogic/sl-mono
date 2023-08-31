@@ -38,42 +38,42 @@
 namespace sl::io
 {
 
-    struct MappedFile : sl::utils::NonCopyable
+    struct mapped_file : sl::utils::noncopyable
     {
     public:
-        MappedFile( const char* name, CacheHint hint = CacheHint::Default )
+        mapped_file( const char* name, cache_hint hint = cache_hint::none )
             : _hint { MADV_NORMAL }
             , _fd { -1 }
             , _size { 0 }
         {
             _fd = ::open( name, O_RDONLY );
-            io::Error::ThrowIf( _fd == -1, "c-lib::open", errno, "failed to open file" );
+            io::error::throw_if( _fd == -1, "c-lib::open", errno, "failed to open file" );
 
             struct stat si;
             if ( ::fstat( _fd, &si ) < 0 )
             {
                 auto err = errno;
                 ::close( _fd );
-                io::Error::Throw( "c-lib::fstat", err, "failed to get file size" );
+                io::error::throw_if( true, "c-lib::fstat", err, "failed to get file size" );
             }
 
             _size = si.st_size;
 
             switch ( hint )
             {
-            case CacheHint::Default:
+            case cache_hint::none:
                 _hint = MADV_NORMAL;
                 break;
-            case CacheHint::Random:
+            case cache_hint::random:
                 _hint = MADV_RANDOM;
                 break;
-            case CacheHint::Sequential:
+            case cache_hint::sequential:
                 _hint = MADV_SEQUENTIAL;
                 break;
             }
         }
 
-        ~MappedFile() noexcept
+        ~mapped_file() noexcept
         {
             if ( _fd >= 0 )
                 ::close( _fd );
@@ -82,11 +82,11 @@ namespace sl::io
             _size = 0;
         }
 
-        size_t Size() const { return _size; }
+        size_t size() const { return _size; }
 
-        MappedView MapView( size_t offset, size_t size ) const
+        mapped_view map_view( size_t offset, size_t size ) const
         {
-            return MappedView( _fd, offset, size, _hint );
+            return mapped_view( _fd, offset, size, _hint );
         }
 
     private:

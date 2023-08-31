@@ -25,29 +25,34 @@
 #include <catch2/catch.hpp>
 #include <test/async.h>
 
+#include <uv.h>
+
+#include <logging/logger.h>
 #include <uv/idler.h>
 
 using namespace std::chrono_literals;
 
-TEST_CASE( "UV Idler executes", "[uv]" )
+TEST_CASE( "UV idler executes", "[uv]" )
 {
     std::atomic< int > count { 0 };
-    sl::uv::Loop loop;
-    sl::uv::Idler idler( loop, [&]() { count++; } );
+    sl::logging::logger logger;
+    sl::uv::loop loop( logger );
+    sl::uv::idler idler( loop, [&]() { count++; } );
 
-    loop.Run( sl::uv::Loop::RunMode::NoWait );
+    loop.run( sl::uv::run_mode::no_wait );
     REQUIRE( count == 1 );
 }
 
-TEST_CASE( "UV Idler executes each loop iteration", "[uv]" )
+TEST_CASE( "UV idler executes each loop iteration", "[uv]" )
 {
-    auto [completed, count] = sl::test::RunAsync< int >( 2000ms, []() -> int {
+    auto [completed, count] = sl::test::run_async< int >( 2000ms, []() -> int {
         std::atomic< int > count { 0 };
-        sl::uv::Loop loop;
-        sl::uv::Idler idler( loop, [&]() { count++; } );
+        sl::logging::logger logger;
+        sl::uv::loop loop( logger );
+        sl::uv::idler idler( loop, [&]() { count++; } );
 
         for ( int i = 1; i <= 10; i++ )
-            loop.Run( sl::uv::Loop::RunMode::Once );
+            loop.run( sl::uv::run_mode::once );
 
         return count;
     } );
@@ -56,16 +61,17 @@ TEST_CASE( "UV Idler executes each loop iteration", "[uv]" )
     REQUIRE( count == 10 );
 }
 
-TEST_CASE( "UV Loop outlives Idler", "[uv]" )
+TEST_CASE( "UV loop outlives idler", "[uv]" )
 {
     std::atomic< int > count { 0 };
     std::atomic< int > hcount { 0 };
 
     {
-        sl::uv::Loop loop;
+        sl::logging::logger logger;
+        sl::uv::loop loop( logger );
         {
-            sl::uv::Idler idler( loop, [&count]() { ++count; } );
-            loop.Run( sl::uv::Loop::RunMode::Once );
+            sl::uv::idler idler( loop, [&count]() { ++count; } );
+            loop.run( sl::uv::run_mode::once );
         }
 
         ::uv_walk(
@@ -79,30 +85,32 @@ TEST_CASE( "UV Loop outlives Idler", "[uv]" )
     REQUIRE( count == 1 );
 }
 
-TEST_CASE( "UV Idler outlives Loop", "[uv]" )
+TEST_CASE( "UV idler outlives Loop", "[uv]" )
 {
     std::atomic< int > count { 0 };
 
-    auto loop  = std::make_unique< sl::uv::Loop >();
-    auto idler = sl::uv::Idler { *loop, [&]() { count++; } };
+    sl::logging::logger logger;
+    auto loop  = std::make_unique< sl::uv::loop< sl::logging::logger > >( logger );
+    auto idler = sl::uv::idler { *loop, [&]() { count++; } };
 
-    loop->Run( sl::uv::Loop::RunMode::Once );
+    loop->run( sl::uv::run_mode::once );
     REQUIRE( count == 1 );
 
     loop.reset();
     REQUIRE( count == 1 );
 }
 
-TEST_CASE( "UV Idler movable", "[uv]" )
+TEST_CASE( "UV idler movable", "[uv]" )
 {
     std::atomic< int > count { 0 };
 
     {
-        sl::uv::Loop loop;
-        sl::uv::Idler idler { loop, [&]() { count++; } };
-        sl::uv::Idler idler2 { std::move( idler ) };
+        sl::logging::logger logger;
+        sl::uv::loop loop( logger );
+        sl::uv::idler idler { loop, [&]() { count++; } };
+        sl::uv::idler idler2 { std::move( idler ) };
 
-        loop.Run( sl::uv::Loop::RunMode::Once );
+        loop.run( sl::uv::run_mode::once );
         REQUIRE( count == 1 );
     }
 

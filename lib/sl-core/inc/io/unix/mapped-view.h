@@ -35,20 +35,20 @@
 namespace sl::io
 {
 
-    struct MappedView : sl::utils::NonCopyable
+    struct mapped_view : sl::utils::noncopyable
     {
     public:
-        MappedView( int fd, size_t offset, size_t size, int hint )
+        mapped_view( int fd, size_t offset, size_t size, int hint )
             : _size { size }
         {
             _view = ::mmap( nullptr, size, PROT_READ, MAP_SHARED, fd, offset );
-            io::Error::ThrowIf( _view == MAP_FAILED, "c-lib::mmap", errno, "failed to map view" );
+            io::error::throw_if( _view == MAP_FAILED, "c-lib::mmap", errno, "failed to map view" );
 
             // We are going to ignore the failure here. Worst case, we don't get to "tweak".
             ::madvise( _view, size, hint );
         }
 
-        ~MappedView() noexcept
+        ~mapped_view() noexcept
         {
             if ( _view != nullptr )
                 ::munmap( _view, _size );   // Any failure (unlikely) is ignored.
@@ -57,23 +57,29 @@ namespace sl::io
             _size = 0;
         }
 
+        /**
+         * Caller is responsible for not violating alignment rules for the CPU
+         */
         template< typename T >
-        T& As( size_t offset = 0 ) const
+        T& as( size_t offset = 0 ) const
         {
             const auto sp = static_cast< unsigned char* >( _view );
             const auto ep = sp + _size;
             auto ptr      = sp + offset;
 
-            io::Error::ThrowIf(
+            io::error::throw_if(
                 ptr >= ep, "offset-check", -1, "data offset is beyond mapped view" );
-            io::Error::ThrowIf(
+            io::error::throw_if(
                 ptr + sizeof( T ) > ep, "T-size-check", -1, "object of type T exceeds data view" );
 
-            return *reinterpret_cast< T* >( ptr );
+            return *static_cast< T* >( static_cast< void* >( ptr ) );
         }
 
+        /**
+         * Caller is responsible for not violating alignment rules for the CPU
+         */
         template< typename T >
-        std::span< T > AsItems( size_t offset = 0, size_t count = 0 ) const
+        std::span< T > as_items( size_t offset = 0, size_t count = 0 ) const
         {
             const auto sp = static_cast< unsigned char* >( _view );
             const auto ep = sp + _size;
@@ -82,12 +88,17 @@ namespace sl::io
             if ( count == 0 )
                 count = ( _size - offset ) / sizeof( T );
 
-            io::Error::ThrowIf(
+            io::error::throw_if(
                 ptr >= ep, "offset-check", -1, "data offset is beyond mapped view" );
-            io::Error::ThrowIf(
+            io::error::throw_if(
                 count == 0, "T-size-count-check", -1, "object of type T exceeds data view" );
 
-            return std::span< T >( reinterpret_cast< T* >( ptr ), count );
+            return std::span< T >( static_cast< T* >( static_cast< void* >( ptr ) ), count );
+        }
+
+        std::span< std::byte > as_bytes( size_t offset = 0, size_t count = 0 ) const
+        {
+            return as_items< std::byte >( offset, count );
         }
 
     private:

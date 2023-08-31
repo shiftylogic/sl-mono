@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2023 Robert Anderson
+ * Copyright (c) 2023-present Robert Anderson
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,17 +25,30 @@
 #ifndef __LAZY_H_C394AA8C06F347DCB57004A53C3B4286__
 #define __LAZY_H_C394AA8C06F347DCB57004A53C3B4286__
 
+#include <optional>
+#include <tuple>
+
 namespace sl::utils
 {
 
-    template< typename T >
-    struct Lazy
+    template< typename T, typename... Args >
+    struct lazy
     {
-        T& Get()
+        explicit lazy( Args... args )
+            : _args( args... )
+        {}
+
+        T& get()
         {
-            static T instance;
-            return instance;
+            if ( !_value )
+                std::apply( [&]( auto&&... args ) { _value.emplace( args... ); }, _args );
+
+            return *_value;
         }
+
+    private:
+        std::optional< T > _value;
+        std::tuple< Args... > _args;
     };
 
 }   // namespace sl::utils

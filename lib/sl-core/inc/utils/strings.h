@@ -1,7 +1,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2023 Robert Anderson
+ * Copyright (c) 2023-present Robert Anderson
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,10 @@
 #ifndef __STRINGS_H_7F4C61F262C340A09B9D54E42E195235__
 #define __STRINGS_H_7F4C61F262C340A09B9D54E42E195235__
 
-#include <memory>
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace sl::utils
 {
@@ -36,9 +36,9 @@ namespace sl::utils
     // This entire computation allows compile-time string constant to
     // to be concatenates into a single string_view instances.
     template< std::string_view const&... Strs >
-    struct StringMerger
+    struct string_merger
     {
-        static constexpr auto Merge() noexcept
+        static constexpr auto merge() noexcept
         {
             constexpr std::size_t len = ( Strs.size() + ... + 0 );
 
@@ -54,17 +54,17 @@ namespace sl::utils
             return arr;
         }
 
-        static constexpr auto _buffer = Merge();
+        static constexpr auto _buffer = merge();
         static constexpr const char* value { _buffer.data() };
     };
 
     // Helper to get the value out
     template< std::string_view const&... Strs >
-    static constexpr auto ConstJoin = StringMerger< Strs... >::value;
+    static constexpr auto const_join = string_merger< Strs... >::value;
 
 
     template< typename... Args >
-    size_t CalculateFormattedLength( const char* format, Args... args )
+    size_t calculate_string_length( const char* format, Args... args )
     {
         auto length = std::snprintf( nullptr, 0, format, args... );
         if ( length <= 0 )
@@ -74,7 +74,7 @@ namespace sl::utils
     }
 
     template< typename... Args >
-    size_t FormatString( std::span< char > buffer, const char* format, Args... args )
+    size_t format_string( std::span< char > buffer, const char* format, Args... args )
     {
         auto count = std::snprintf( buffer.data(), buffer.size(), format, args... );
         if ( count <= 0 )
@@ -86,19 +86,19 @@ namespace sl::utils
     }
 
     template< typename... Args >
-    std::string FormatString( const char* format, Args... args )
+    std::string format_string( const char* format, Args... args )
     {
-        auto needed = CalculateFormattedLength( format, args... );
+        auto needed = calculate_string_length( format, args... );
         auto str    = std::string( needed, 0 );
         auto buf    = std::span( &str[0], str.capacity() );
 
-        FormatString( buf, format, args... );
+        format_string( buf, format, args... );
 
         return str;
     }
 
     template< typename StringType >
-    std::string Join( const std::span< StringType > ss )
+    std::string join( const std::span< StringType > ss )
     {
         if ( ss.size() == 0 )
             return std::string();
@@ -108,6 +108,49 @@ namespace sl::utils
             res = res + ", " + ss[i];
 
         return res;
+    }
+
+    inline std::string string_upper( std::string_view orig )
+    {
+        std::string s( orig );
+        std::transform( std::begin( s ), std::end( s ), std::begin( s ), []( unsigned char c ) {
+            return std::toupper( c );
+        } );
+        return s;
+    }
+
+    inline std::string hash_string( std::string_view s )
+    {
+        return std::to_string( std::hash< std::string_view > {}( s ) );
+    }
+
+    inline void replace_all( std::string& s, char search, char replace )
+    {
+        for ( auto& ch : s )
+            if ( ch == search )
+                ch = replace;
+    }
+
+    // Intentionally not a reference to a string to force a copy and allocation.
+    // We will convert the input argument in-place and return it.
+    std::string snake_to_pascal( std::string str ) noexcept
+    {
+        bool cap = true;
+        auto n   = 0;
+        for ( unsigned char ch : str )
+        {
+            if ( ch == '_' )
+            {
+                cap = true;
+                continue;
+            }
+
+            str[n++] = cap ? std::toupper( ch ) : ch;
+            cap      = false;
+        }
+
+        str.resize( n );
+        return str;
     }
 
 }   // namespace sl::utils

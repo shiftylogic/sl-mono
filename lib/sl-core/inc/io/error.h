@@ -27,36 +27,33 @@
 
 #include <stdexcept>
 
-#include <utils/strings.h>
-
 namespace sl::io
 {
 
-    class Error : public std::runtime_error
+    struct error : public std::runtime_error
     {
-    public:
-        Error( const char* api, int code, const char* message )
-            : std::runtime_error { io::Error::MakeMessage( api, code, message ) }
+        explicit error( const char* api, int code, const char* message )
+            : std::runtime_error { message }
+            , _api { api }
+            , _code { code }
         {}
 
-        static void Throw( const char* api, int code, const char* message = nullptr )
-        {
-            throw io::Error { api, code, message };
-        }
-
         static void
-        ThrowIf( bool condition, const char* api, int code, const char* message = nullptr )
+        throw_if( bool condition, const char* api, int code, const char* message = nullptr )
         {
             if ( condition )
-                Throw( api, code, message );
+                throw io::error { api, code, message };
+        }
+
+        template< typename Logger >
+        void log( Logger& logger ) const
+        {
+            logger.error( "*** IO ERROR *** '%s' failed: %s (Code: %d)", _api, what(), _code );
         }
 
     private:
-        static std::string MakeMessage( const char* api, int code, const char* message )
-        {
-            const char* msg = ( nullptr == message ) ? "<unspecified>" : message;
-            return sl::utils::FormatString( "IO Error (%s): [%d] %s", api, code, msg );
-        }
+        const char* _api;
+        const int _code;
     };
 
 }   // namespace sl::io
