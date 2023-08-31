@@ -22,10 +22,11 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( vendor )
+project( json )
 
-add_subdirectory( catch2 )
-add_subdirectory( json )
-add_subdirectory( libuv )
-add_subdirectory( sqlite )
-add_subdirectory( unordered_dense )
+add_library( ${PROJECT_NAME} INTERFACE )
+
+target_include_directories( ${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
