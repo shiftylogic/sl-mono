@@ -22,12 +22,12 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( vendor )
+set( GLM_VERSION "0.9.9" )
 
-add_subdirectory( catch2 )
-add_subdirectory( glm )
-add_subdirectory( json )
-add_subdirectory( libuv )
-add_subdirectory( sqlite )
-add_subdirectory( unordered_dense )
-add_subdirectory( vulkan )
+project( glm VERSION ${GLM_VERSION} LANGUAGES CXX )
+
+add_library( ${PROJECT_NAME} INTERFACE )
+
+target_include_directories( ${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
