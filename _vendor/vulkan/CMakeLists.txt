@@ -16,17 +16,55 @@
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FOM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( vendor )
+project( vulkan )
 
-add_subdirectory( catch2 )
-add_subdirectory( json )
-add_subdirectory( libuv )
-add_subdirectory( sqlite )
-add_subdirectory( unordered_dense )
-add_subdirectory( vulkan )
+
+#####################################
+#
+# Setup platform-specific variables
+#
+
+if( WIN32 )
+    set( SL_VULKAN_PLATFORM_KHR "VK_USE_PLATFORM_WIN32_KHR" )
+elseif( APPLE )
+    set( SL_VULKAN_PLATFORM_KHR "VK_USE_PLATFORM_MACOS_MVK" )
+else()
+    message( FATAL_ERROR "Platform currently not supported." )
+endif()
+
+
+#####################################
+#
+# Setup any compiler / linker flags
+#
+
+add_compile_definitions(
+    ${SL_VULKAN_PLATFORM_KHR}
+    VOLK_VULKAN_H_PATH="vk.h"
+)
+
+
+#####################################
+#
+# Setup the library
+
+add_library( ${PROJECT_NAME} STATIC
+    src/vma/vma.cpp
+    src/volk/volk.c
+)
+
+target_compile_definitions( ${PROJECT_NAME} PUBLIC
+    ${SL_VULKAN_PLATFORM_KHR}
+)
+
+target_include_directories( ${PROJECT_NAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+enable_warnings( ${PROJECT_NAME} )
