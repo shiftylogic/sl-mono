@@ -22,10 +22,48 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( sl-libs )
+project( sl-app )
 
-add_subdirectory( sl-core )
-add_subdirectory( sl-app )
-add_subdirectory( sl-data )
-add_subdirectory( sl-uv )
+add_library( ${PROJECT_NAME} INTERFACE )
 
+target_include_directories( ${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+target_link_libraries( ${PROJECT_NAME} INTERFACE
+    sl-core
+    glfw
+)
+
+# Only necessary if this switches from INTERFACE to STATIC
+# enable_warnings( ${PROJECT_NAME} )
+
+###################
+#
+# Build examples
+
+add_example(
+    NAME win-bare
+    SOURCES examples/win-bare.cpp
+    LIBRARIES sl-core ${PROJECT_NAME}
+)
+
+# add_example(
+#     NAME win-input
+#     SOURCES examples/win-input.cpp
+#     LIBRARIES sl-core ${PROJECT_NAME}
+# )
+
+
+###################
+#
+# Build tests
+
+# set( SL_APP_LIB_TEST_SRCS
+# )
+#
+# build_tests(
+#     NAME app-tests
+#     SOURCES ${SL_APP_LIB_TEST_SRCS}
+#     LIBRARIES ${PROJECT_NAME}
+# )
