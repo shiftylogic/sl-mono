@@ -22,13 +22,18 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( vendor )
+project( glfw-root )
 
-add_subdirectory( catch2 )
-add_subdirectory( glfw )
-add_subdirectory( glm )
-add_subdirectory( json )
-add_subdirectory( libuv )
-add_subdirectory( sqlite )
-add_subdirectory( unordered_dense )
-add_subdirectory( vulkan )
+set( SL_GLFW_VERSION "3.3.8" )
+
+file( ARCHIVE_EXTRACT
+    INPUT "${CMAKE_CURRENT_SOURCE_DIR}/glfw-${SL_GLFW_VERSION}.zip"
+    DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+set( GLFW_BUILD_EXAMPLES OFF )
+set( GLFW_BUILD_TEST OFF )
+set( GLFW_BUILD_DOCS OFF )
+set( GLFW_INSTALL OFF )
+
+add_subdirectory( "glfw-${SL_GLFW_VERSION}" )
