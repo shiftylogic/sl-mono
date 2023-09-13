@@ -33,6 +33,7 @@ target_include_directories( ${PROJECT_NAME} INTERFACE
 target_link_libraries( ${PROJECT_NAME} INTERFACE
     sl-core
     glfw
+    unordered_dense
 )
 
 # Only necessary if this switches from INTERFACE to STATIC
@@ -48,11 +49,11 @@ add_example(
     LIBRARIES sl-core ${PROJECT_NAME}
 )
 
-# add_example(
-#     NAME win-input
-#     SOURCES examples/win-input.cpp
-#     LIBRARIES sl-core ${PROJECT_NAME}
-# )
+add_example(
+    NAME win-input
+    SOURCES examples/win-input.cpp
+    LIBRARIES sl-core ${PROJECT_NAME}
+)
 
 
 ###################
