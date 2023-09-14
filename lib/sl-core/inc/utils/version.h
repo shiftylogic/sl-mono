@@ -31,19 +31,19 @@
 namespace sl::utils
 {
 
-    struct Version
+    struct version
     {
-        uint32_t major : 10;
-        uint32_t minor : 10;
-        uint32_t patch : 12;
+        const uint32_t major : 10;
+        const uint32_t minor : 10;
+        const uint32_t patch : 12;
 
-        constexpr Version( uint32_t major, uint32_t minor, uint32_t patch )
+        constexpr version( uint32_t major, uint32_t minor, uint32_t patch )
             : major { major }
             , minor { minor }
             , patch { patch }
         {}
 
-        constexpr Version( uint32_t ver )
+        constexpr version( uint32_t ver )
             : major { ver >> 22 }
             , minor { ( ver >> 12 ) & 0x3ffu }
             , patch { ver & 0xfffu }
@@ -51,7 +51,7 @@ namespace sl::utils
 
         operator uint32_t() const { return ( major << 22 ) | ( minor << 12 ) | patch; }
 
-        std::string AsString() const
+        std::string as_string() const
         {
             // NOTE: Small string optimization should have this result in
             //       zero allocations on the heap.

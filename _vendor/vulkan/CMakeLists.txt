@@ -41,17 +41,6 @@ endif()
 
 #####################################
 #
-# Setup any compiler / linker flags
-#
-
-add_compile_definitions(
-    ${SL_VULKAN_PLATFORM_KHR}
-    VOLK_VULKAN_H_PATH="vk.h"
-)
-
-
-#####################################
-#
 # Setup the library
 
 add_library( ${PROJECT_NAME} STATIC
@@ -61,6 +50,7 @@ add_library( ${PROJECT_NAME} STATIC
 
 target_compile_definitions( ${PROJECT_NAME} PUBLIC
     ${SL_VULKAN_PLATFORM_KHR}
+    VOLK_VULKAN_H_PATH="vk.h"
 )
 
 target_include_directories( ${PROJECT_NAME} PUBLIC

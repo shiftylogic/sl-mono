@@ -22,11 +22,56 @@
 
 cmake_minimum_required( VERSION 3.13 )
 
-project( sl-libs )
+project( sl-vk )
 
-add_subdirectory( sl-core )
-add_subdirectory( sl-app )
-add_subdirectory( sl-data )
-add_subdirectory( sl-uv )
-add_subdirectory( sl-vk )
 
+#####################################
+#
+# Setup the main project library
+
+add_library( ${PROJECT_NAME} INTERFACE )
+
+target_include_directories( ${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+target_link_libraries( ${PROJECT_NAME} INTERFACE
+    sl-core
+    vulkan
+)
+
+target_compile_definitions( ${PROJECT_NAME} INTERFACE
+    SL_VKCORE_LOGGING_ENABLED
+    # SL_VKCORE_TRACE_ENABLED
+)
+
+
+# Only necessary if this switches from INTERFACE to STATIC
+# enable_warnings( ${PROJECT_NAME} )
+
+
+###################
+#
+# Build examples
+
+add_example(
+    NAME vk-init
+    SOURCES examples/vk-init.cpp
+    LIBRARIES ${PROJECT_NAME}
+)
+
+
+###################
+#
+# Build tests
+
+set( SL_VK_LIB_TEST_SRCS
+    tests/core/device-resource-test.cpp
+    tests/core/resource-test.cpp
+)
+
+build_tests(
+    NAME vk-tests
+    SOURCES ${SL_VK_LIB_TEST_SRCS}
+    LIBRARIES ${PROJECT_NAME}
+)
