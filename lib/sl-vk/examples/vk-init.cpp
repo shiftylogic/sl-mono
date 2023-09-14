@@ -29,6 +29,7 @@
 #include <utils/version.h>
 
 #include <vk/core/app-context.h>
+#include <vk/core/debug-helpers.h>
 #include <vk/core/loader.h>
 
 namespace
@@ -79,9 +80,15 @@ int main()
 
     try
     {
-        logger.info( "Initializing..." );
+        logger.info( "Initializing loader..." );
+        auto loader = sl::vk::core::loader {};
+        auto layers = loader.available_layers();
+        auto exts   = loader.available_extensions();
 
-        auto loader      = sl::vk::core::loader {};
+        sl::vk::core::debug::dump_properties( logger, std::span { layers }, "Available layers:" );
+        sl::vk::core::debug::dump_properties( logger, std::span { exts }, "Available Extensions:" );
+
+        logger.info( "Initializing application context..." );
         auto app_context = sl::vk::core::make_app_context( logger, loader, app_configurator {} );
 
         logger.info( "Shutting down..." );
