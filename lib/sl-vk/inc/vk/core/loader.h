@@ -62,6 +62,8 @@ namespace sl::vk::core
             return core::instance( inst, ::vkDestroyInstance );
         }
 
+        auto runtime_version() const { return ::volkGetInstanceVersion(); }
+
         template< typename Function >
         auto lookup_function( core::instance& inst, const char* name ) const
         {

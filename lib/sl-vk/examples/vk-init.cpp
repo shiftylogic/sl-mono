@@ -81,15 +81,15 @@ int main()
     try
     {
         logger.info( "Initializing loader..." );
-        auto loader = sl::vk::core::loader {};
-        auto layers = loader.available_layers();
-        auto exts   = loader.available_extensions();
 
-        sl::vk::core::debug::dump_properties( logger, std::span { layers }, "Available layers:" );
-        sl::vk::core::debug::dump_properties( logger, std::span { exts }, "Available Extensions:" );
+        auto loader     = sl::vk::core::loader {};
+        auto app_config = app_configurator {};
+
+        sl::vk::core::debug::log_diagnostics( logger, loader );
+        sl::vk::core::debug::log_diagnostics( logger, app_config );
 
         logger.info( "Initializing application context..." );
-        auto app_context = sl::vk::core::make_app_context( logger, loader, app_configurator {} );
+        auto app_context = sl::vk::core::make_app_context( loader, app_config );
 
         logger.info( "Shutting down..." );
     }
