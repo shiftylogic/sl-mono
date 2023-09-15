@@ -58,8 +58,20 @@ namespace sl::vk::core
             return loader.create_instance( create_info );
         }
 
-        template< typename Loader, typename DebugHandler >
-        auto create_debug( Loader& loader, core::instance& inst, DebugHandler debug_handler )
+    }   // namespace priv
+
+    template< typename Loader, typename AppConfigurator >
+    struct app_context
+    {
+        explicit app_context( const Loader& loader, const AppConfigurator& cfg )
+            : _loader { loader }
+            , _instance { priv::create_instance( loader, cfg ) }
+        {}
+
+        auto get_physical_devices() const { return _loader.get_physical_devices( _instance ); }
+
+        template< typename DebugHandler >
+        void enable_debug( DebugHandler debug_handler )
         {
             core::debug_utils_messenger_create_info_ext ci;
             ci.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
@@ -71,41 +83,14 @@ namespace sl::vk::core
             ci.pfnUserCallback = *debug_handler;
             ci.pUserData       = nullptr;
 
-            return loader.create_debug_messenger( inst, ci );
+            _debug = _loader.create_debug_messenger( _instance, ci );
         }
 
-    }   // namespace priv
-
-    struct app_context
-    {
-        explicit app_context( core::instance&& inst )
-            : _instance { std::move( inst ) }
-        {}
-
-        explicit app_context( core::instance&& inst, core::debug_utils_messenger&& debug )
-            : _instance { std::move( inst ) }
-            , _debug { std::move( debug ) }
-        {}
-
     private:
-        core::instance _instance;
+        const Loader& _loader;
+        const core::instance _instance;
         core::debug_utils_messenger _debug;
     };
-
-    template< typename Loader, typename AppConfigurator, typename DebugHandler >
-    auto make_app_context( Loader& loader, const AppConfigurator& cfg, DebugHandler debug_handler )
-    {
-        auto inst  = priv::create_instance( loader, cfg );
-        auto debug = priv::create_debug( loader, inst, debug_handler );
-
-        return core::app_context { std::move( inst ), std::move( debug ) };
-    }
-
-    template< typename Loader, typename AppConfigurator >
-    auto make_app_context( Loader& loader, const AppConfigurator& cfg )
-    {
-        return core::app_context { priv::create_instance( loader, cfg ) };
-    }
 
 }   // namespace sl::vk::core
 

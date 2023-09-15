@@ -25,11 +25,16 @@
 #ifndef __LOADER_H_563420A83E5945238A07F6B49AEAC37C__
 #define __LOADER_H_563420A83E5945238A07F6B49AEAC37C__
 
+#include <functional>
+#include <vector>
+
 #include <vulkan.h>
 
 #include <vk/core/resources.h>
 #include <vk/core/structs.h>
 #include <vk/error.h>
+
+#include <vk/core/physical-device.h>
 
 namespace sl::vk::core
 {
@@ -84,7 +89,7 @@ namespace sl::vk::core
             return exts;
         }
 
-        auto create_instance( core::instance_create_info& ci ) const
+        auto create_instance( const core::instance_create_info& ci ) const
         {
             VkInstance inst;
             vk::error::throw_if_error( "vkCreateInstance",
@@ -104,8 +109,8 @@ namespace sl::vk::core
          * Methods available based on a specific Vulkan instance.
          **/
 
-        auto create_debug_messenger( core::instance& inst,
-                                     core::debug_utils_messenger_create_info_ext& ci ) const
+        auto create_debug_messenger( const core::instance& inst,
+                                     const core::debug_utils_messenger_create_info_ext& ci ) const
         {
             VkDebugUtilsMessengerEXT debug;
             vk::error::throw_if_error(
@@ -116,9 +121,39 @@ namespace sl::vk::core
             return core::debug_utils_messenger { inst, debug, ::vkDestroyDebugUtilsMessengerEXT };
         }
 
-        void load_device_table( device_table& table, VkDevice device )
+        auto get_physical_devices( const core::instance& inst ) const
         {
-            ::volkLoadDeviceTable( &table, device );
+            uint32_t count;
+            vk::error::throw_if_error( "vkEnumeratePhysicalDevices",
+                                       ::vkEnumeratePhysicalDevices( inst, &count, nullptr ),
+                                       "failed to acquire physical devices (count)" );
+            if ( count == 0 )
+                throw std::runtime_error( "no Vulkan compatible device found" );
+
+            std::vector< VkPhysicalDevice > device_handles( count );
+            vk::error::throw_if_error(
+                "vkEnumeratePhysicalDevices",
+                ::vkEnumeratePhysicalDevices( inst, &count, device_handles.data() ),
+                "failed to acquire physical devices (count)" );
+
+            std::vector< core::physical_device > devices;
+            devices.reserve( device_handles.size() );
+
+            std::transform( std::begin( device_handles ),
+                            std::end( device_handles ),
+                            std::back_inserter( devices ),
+                            []( auto device_handle ) {
+                                VkPhysicalDeviceProperties props;
+                                ::vkGetPhysicalDeviceProperties( device_handle, &props );
+
+                                VkPhysicalDeviceMemoryProperties memory_props;
+                                ::vkGetPhysicalDeviceMemoryProperties( device_handle,
+                                                                       &memory_props );
+
+                                return physical_device { device_handle, props, memory_props };
+                            } );
+
+            return devices;
         }
     };
 

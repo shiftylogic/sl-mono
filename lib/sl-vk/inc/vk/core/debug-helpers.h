@@ -26,14 +26,37 @@
 #define __DEBUG_HELPERS_H_50FB080ED2FD40E28764DAFE7030B4BA__
 
 #include <charconv>
+#include <functional>
+#include <span>
 
 #include <vk/core/loader.h>
+#include <vk/core/physical-device.h>
 
 namespace sl::vk::core::debug
 {
 
     namespace priv
     {
+
+        const char* device_type_string( VkPhysicalDeviceType type )
+        {
+            switch ( type )
+            {
+            case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+                return "Other";
+            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+                return "Integrated";
+            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+                return "Discrete";
+            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+                return "Virtual";
+            case VK_PHYSICAL_DEVICE_TYPE_CPU:
+                return "CPU";
+            default:
+                return "Unknown";
+            }
+        }
+
         /**
          * Turns a uint32_t API version number into a display string.
          *
@@ -42,14 +65,11 @@ namespace sl::vk::core::debug
          * Takes the form 'xxxx.yyyy.zzzz [v]'. The '[v] is the "variant" of the API.
          * The string length will never be more than 18 + 1 characters (NULL-terminated).
          */
-
-        const char* api_to_string( uint32_t version, std::span< char, 20 > buf )
+        template< size_t N >
+        const char* api_to_string( uint32_t version, std::span< char, N > buf )
         {
-            /**
-             * Takes the form 'xxxx.yyyy.zzzz [v]'. The '[v] is the "variant" which appears
-             * to almost always be 0 (zero).
-             * This will always be 9-18 characters plus \0.
-             */
+            static_assert( N >= 19 );
+
             const uint32_t var   = version >> 29;                // 0-3
             const uint32_t major = ( version >> 22 ) & 0x3ffu;   // 0 - 1023
             const uint32_t minor = ( version >> 12 ) & 0x3ffu;   // 0 - 1023
@@ -81,8 +101,11 @@ namespace sl::vk::core::debug
          * Takes the form 'xxxx.yyyy.zzzz'.
          * The string length will never be more than 14 + 1 characters (NULL-terminated).
          */
-        const char* version_to_string( uint32_t version, std::span< char, 16 > buf )
+        template< size_t N >
+        const char* version_to_string( uint32_t version, std::span< char, N > buf )
         {
+            static_assert( N >= 15 );
+
             const uint32_t major = version >> 22;                // 0 - 1023
             const uint32_t minor = ( version >> 12 ) & 0x3ffu;   // 0 - 1023
             const uint32_t patch = version & 0xfffu;             // 0 - 4095
@@ -115,7 +138,6 @@ namespace sl::vk::core::debug
             return ext.extensionName;
         }
 
-
         template< typename Logger, typename PTypeItems >
         void dump_properties( Logger& logger, PTypeItems props, const char* indent )
         {
@@ -136,7 +158,8 @@ namespace sl::vk::core::debug
     template< typename Logger >
     void log_diagnostics( Logger& logger, const sl::vk::core::loader& loader )
     {
-        char buf[20];
+        char scratch[20];
+        auto buf = std::span( scratch );
 
         logger.trace( "Built with Vulkan SDK v%s",
                       priv::api_to_string( VK_HEADER_VERSION_COMPLETE, buf ) );
@@ -155,7 +178,8 @@ namespace sl::vk::core::debug
     template< typename Logger, typename AppConfigurator >
     void log_diagnostics( Logger& logger, const AppConfigurator& cfg )
     {
-        char buf[16];
+        char scratch[16];
+        auto buf = std::span( scratch );
 
         logger.trace( "Vulkan instance configuration:" );
         logger.trace( "  -> App Name: %s", cfg.application_name() );
@@ -173,6 +197,67 @@ namespace sl::vk::core::debug
         auto exts = cfg.enabled_extensions();
         logger.trace( "  -> Enabled Extensions:" );
         priv::dump_properties( logger, exts, "    +++" );
+    }
+
+    template< typename Logger >
+    void log_diagnostics( Logger& logger, const sl::vk::core::physical_device& device )
+    {
+        char scratch[20];
+        auto buf = std::span( scratch );
+
+        logger.trace( "Available Physical Device:" );
+        logger.trace( "  => %s", device.name() );
+        logger.trace( "    > API Version:    %s",
+                      priv::api_to_string( device.api_version(), buf ) );
+        logger.trace( "    > Driver Version: 0x%08x", device.driver_version() );
+        logger.trace( "    > Device Type:    %s", priv::device_type_string( device.type() ) );
+
+        const auto& limits = device.limits();
+        logger.trace( "    > Device Limits:" );
+        logger.trace( "      -> Discrete Queue Priorities:                 %lu",
+                      limits.discreteQueuePriorities );
+        logger.trace( "      -> Maximum Bound Descriptor Sets:             %lu",
+                      limits.maxBoundDescriptorSets );
+        logger.trace( "      -> Maximum Descriptor Set Input Attachments:  %lu",
+                      limits.maxDescriptorSetInputAttachments );
+        logger.trace( "      -> Maximum Descriptor Set Sampled Images:     %lu",
+                      limits.maxDescriptorSetSampledImages );
+        logger.trace( "      -> Maximum Descriptor Set Samplers:           %lu",
+                      limits.maxDescriptorSetSamplers );
+        logger.trace( "      -> Maximum Descriptor Set Storage Buffers:    %lu",
+                      limits.maxDescriptorSetStorageBuffers );
+        logger.trace( "      -> Maximum Descriptor Set Storage Images:     %lu",
+                      limits.maxDescriptorSetStorageImages );
+        logger.trace( "      -> Maximum Descriptor Set Uniform Buffers:    %lu",
+                      limits.maxDescriptorSetUniformBuffers );
+        logger.trace( "      -> Maximum Per Stage Resources:               %lu",
+                      limits.maxPerStageResources );
+        logger.trace( "      -> Maximum Framebuffer Height:                %lu",
+                      limits.maxFramebufferHeight );
+        logger.trace( "      -> Maximum Framebuffer Width:                 %lu",
+                      limits.maxFramebufferWidth );
+        logger.trace( "      -> Maximum Memory Allocations:                %lu",
+                      limits.maxMemoryAllocationCount );
+        logger.trace( "      -> Maximum Push Constant Bytes:               %lu",
+                      limits.maxPushConstantsSize );
+        logger.trace( "      -> Maximum Vertex Input Attributes:           %lu",
+                      limits.maxVertexInputAttributes );
+        logger.trace( "      -> Maximum Vertex Input Bindings:             %lu",
+                      limits.maxVertexInputBindings );
+        logger.trace( "      -> Texel Buffer Alignment:                    %lu",
+                      limits.minTexelBufferOffsetAlignment );
+        logger.trace( "      -> Storage Buffer Alignment:                  %lu",
+                      limits.minStorageBufferOffsetAlignment );
+        logger.trace( "      -> Uniform Buffer Alignment:                  %lu",
+                      limits.minUniformBufferOffsetAlignment );
+    }
+
+    template< typename Logger >
+    void log_diagnostics( Logger& logger, const std::span< sl::vk::core::physical_device > devices )
+    {
+        std::for_each( std::begin( devices ), std::end( devices ), [&logger]( const auto& device ) {
+            log_diagnostics( logger, device );
+        } );
     }
 
 }   // namespace sl::vk::core::debug

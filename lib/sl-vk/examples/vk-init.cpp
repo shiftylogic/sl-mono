@@ -35,7 +35,7 @@
 namespace
 {
 
-    auto g_logger = sl::logging::logger {};
+    auto debug_logger = sl::logging::logger {};
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     handle_vulkan_debug( VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -45,30 +45,30 @@ namespace
     {
         if ( type == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT )
         {
-            g_logger.warn( "*** Performance *** ==> %s", pCallbackData->pMessage );
+            debug_logger.warn( "*** Performance *** ==> %s", pCallbackData->pMessage );
             return VK_FALSE;
         }
 
         switch ( severity )
         {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            // g_logger.trace( pCallbackData->pMessage );
+            // debug_logger.trace( pCallbackData->pMessage );
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            g_logger.info( pCallbackData->pMessage );
+            debug_logger.info( pCallbackData->pMessage );
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            g_logger.warn( pCallbackData->pMessage );
+            debug_logger.warn( pCallbackData->pMessage );
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            g_logger.error( pCallbackData->pMessage );
+            debug_logger.error( pCallbackData->pMessage );
             break;
 
         default:
-            g_logger.info( "Unknown severity - %s", pCallbackData->pMessage );
+            debug_logger.info( "Unknown severity - %s", pCallbackData->pMessage );
         }
 
         return VK_FALSE;
@@ -129,8 +129,12 @@ int main()
         sl::vk::core::debug::log_diagnostics( logger, app_config );
 
         logger.info( "Initializing application context..." );
-        auto app_context
-            = sl::vk::core::make_app_context( loader, app_config, handle_vulkan_debug );
+        auto app_context = sl::vk::core::app_context { loader, app_config };
+        app_context.enable_debug( handle_vulkan_debug );
+
+        logger.info( "Enumerating GPU devices..." );
+        auto physical_devices = app_context.get_physical_devices();
+        sl::vk::core::debug::log_diagnostics( logger, std::span( physical_devices ) );
 
         logger.info( "Shutting down..." );
     }
