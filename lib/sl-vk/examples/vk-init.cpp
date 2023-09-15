@@ -35,6 +35,45 @@
 namespace
 {
 
+    auto g_logger = sl::logging::logger {};
+
+    static VKAPI_ATTR VkBool32 VKAPI_CALL
+    handle_vulkan_debug( VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+                         VkDebugUtilsMessageTypeFlagsEXT type,
+                         [[maybe_unused]] const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                         void* /*pUserData*/ )
+    {
+        if ( type == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT )
+        {
+            g_logger.warn( "*** Performance *** ==> %s", pCallbackData->pMessage );
+            return VK_FALSE;
+        }
+
+        switch ( severity )
+        {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            // g_logger.trace( pCallbackData->pMessage );
+            break;
+
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            g_logger.info( pCallbackData->pMessage );
+            break;
+
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            g_logger.warn( pCallbackData->pMessage );
+            break;
+
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            g_logger.error( pCallbackData->pMessage );
+            break;
+
+        default:
+            g_logger.info( "Unknown severity - %s", pCallbackData->pMessage );
+        }
+
+        return VK_FALSE;
+    }
+
     struct app_configurator
     {
         static constexpr std::array k_layers = {
@@ -42,8 +81,9 @@ namespace
         };
 
         static constexpr std::array k_extensions = {
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
             VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
-            "VK_KHR_get_physical_device_properties2",
+            VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
         };
 
         static constexpr const char* k_app_name = "vk-init";
@@ -89,7 +129,8 @@ int main()
         sl::vk::core::debug::log_diagnostics( logger, app_config );
 
         logger.info( "Initializing application context..." );
-        auto app_context = sl::vk::core::make_app_context( loader, app_config );
+        auto app_context
+            = sl::vk::core::make_app_context( loader, app_config, handle_vulkan_debug );
 
         logger.info( "Shutting down..." );
     }

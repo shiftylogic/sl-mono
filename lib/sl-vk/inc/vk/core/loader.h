@@ -36,6 +36,8 @@ namespace sl::vk::core
 
     struct loader
     {
+        using device_table = ::VolkDeviceTable;
+
         explicit loader()
         {
             vk::error::throw_if_error( "volkInitialize",
@@ -48,29 +50,6 @@ namespace sl::vk::core
          * Methods available before an instance is even created. Essentially available
          * in the Vulkan runtime before anything else is done.
          **/
-
-        auto create_instance( core::instance_create_info& ci ) const
-        {
-            VkInstance inst;
-            vk::error::throw_if_error( "vkCreateInstance",
-                                       ::vkCreateInstance( &ci, nullptr, &inst ),
-                                       "failed to create vulkan instance" );
-
-            // We will still need to initialize the VkInstance with Volk
-            ::volkLoadInstanceOnly( inst );
-
-            return core::instance( inst, ::vkDestroyInstance );
-        }
-
-        auto runtime_version() const { return ::volkGetInstanceVersion(); }
-
-        template< typename Function >
-        auto lookup_function( core::instance& inst, const char* name ) const
-        {
-            auto fn = ::vkGetInstanceProcAddr( inst, name );
-            vk::error::throw_if( fn == nullptr, "vkGetInstanceProcAddr", VK_ERROR_UNKNOWN, name );
-            return reinterpret_cast< Function >( fn );
-        }
 
         auto available_layers() const
         {
@@ -103,6 +82,43 @@ namespace sl::vk::core
                 "failed to enumerate instance extension properties" );
 
             return exts;
+        }
+
+        auto create_instance( core::instance_create_info& ci ) const
+        {
+            VkInstance inst;
+            vk::error::throw_if_error( "vkCreateInstance",
+                                       ::vkCreateInstance( &ci, nullptr, &inst ),
+                                       "failed to create vulkan instance" );
+
+            // We will still need to initialize the VkInstance with Volk
+            ::volkLoadInstanceOnly( inst );
+
+            return core::instance( inst, ::vkDestroyInstance );
+        }
+
+        auto runtime_version() const { return ::volkGetInstanceVersion(); }
+
+
+        /**
+         * Methods available based on a specific Vulkan instance.
+         **/
+
+        auto create_debug_messenger( core::instance& inst,
+                                     core::debug_utils_messenger_create_info_ext& ci ) const
+        {
+            VkDebugUtilsMessengerEXT debug;
+            vk::error::throw_if_error(
+                "vkCreateDebugUtilsMessengerEXT",
+                ::vkCreateDebugUtilsMessengerEXT( inst, &ci, nullptr, &debug ),
+                "failed to enable debug utils" );
+
+            return core::debug_utils_messenger { inst, debug, ::vkDestroyDebugUtilsMessengerEXT };
+        }
+
+        void load_device_table( device_table& table, VkDevice device )
+        {
+            ::volkLoadDeviceTable( &table, device );
         }
     };
 

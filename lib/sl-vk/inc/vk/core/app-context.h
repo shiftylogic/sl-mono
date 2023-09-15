@@ -61,11 +61,6 @@ namespace sl::vk::core
         template< typename Loader, typename DebugHandler >
         auto create_debug( Loader& loader, core::instance& inst, DebugHandler debug_handler )
         {
-            auto create = loader.template lookup_function< PFN_vkCreateDebugUtilsMessengerEXT >(
-                inst, "vkCreateDebugUtilsMessengerEXT" );
-            auto destroy = loader.template lookup_function< PFN_vkDestroyDebugUtilsMessengerEXT >(
-                inst, "vkDestroyDebugUtilsMessengerEXT" );
-
             core::debug_utils_messenger_create_info_ext ci;
             ci.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
                                  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
@@ -76,18 +71,17 @@ namespace sl::vk::core
             ci.pfnUserCallback = *debug_handler;
             ci.pUserData       = nullptr;
 
-            VkDebugUtilsMessengerEXT debug;
-            vk::error::throw_if_error( "vkCreateDebugUtilsMessengerEXT",
-                                       create( inst, &ci, nullptr, &debug ),
-                                       "failed to enable debug utils" );
-
-            return core::debug_utils_messenger { inst, debug, destroy };
+            return loader.create_debug_messenger( inst, ci );
         }
 
     }   // namespace priv
 
     struct app_context
     {
+        explicit app_context( core::instance&& inst )
+            : _instance { std::move( inst ) }
+        {}
+
         explicit app_context( core::instance&& inst, core::debug_utils_messenger&& debug )
             : _instance { std::move( inst ) }
             , _debug { std::move( debug ) }
@@ -110,8 +104,7 @@ namespace sl::vk::core
     template< typename Loader, typename AppConfigurator >
     auto make_app_context( Loader& loader, const AppConfigurator& cfg )
     {
-        return core::app_context { priv::create_instance( loader, cfg ),
-                                   core::debug_utils_messenger {} };
+        return core::app_context { priv::create_instance( loader, cfg ) };
     }
 
 }   // namespace sl::vk::core
