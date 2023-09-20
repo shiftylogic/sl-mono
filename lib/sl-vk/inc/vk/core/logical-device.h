@@ -31,13 +31,13 @@
 namespace sl::vk::core
 {
 
-    template< typename DeviceFunctions >
+    template< typename device_functions_t >
     struct logical_device
     {
         explicit logical_device( const core::instance& inst,
                                  const core::physical_device& gpu,
                                  core::device&& device,
-                                 const DeviceFunctions& fns )
+                                 const device_functions_t& fns )
             : _instance { inst }
             , _gpu { gpu }
             , _device { std::move( device ) }
@@ -48,16 +48,16 @@ namespace sl::vk::core
         const core::instance& _instance;
         const core::physical_device& _gpu;
         const core::device _device;
-        DeviceFunctions _fns;
+        device_functions_t _fns;
     };
 
-    template< typename Loader, typename Configurator >
-    auto make_logical_device( const core::loader_base< Loader >& loader,
+    template< typename loader_t, typename configurator_t >
+    auto make_logical_device( const core::loader_base< loader_t >& loader,
                               const core::app_context& app,
                               const core::physical_device& gpu,
-                              const core::device_configurator< Configurator >& cfg )
+                              const core::device_configurator< configurator_t >& cfg )
     {
-        using device_functions_t = core::loader_base< Loader >::device_functions_t;
+        using device_functions_t = core::loader_base< loader_t >::device_functions_t;
 
         auto exts             = cfg.enabled_extensions();
         auto enabled_features = cfg.enabled_features();

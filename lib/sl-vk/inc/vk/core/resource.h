@@ -30,10 +30,10 @@
 namespace sl::vk::core
 {
 
-    template< typename HandleType, typename Context = void, auto NullHandle = nullptr >
+    template< typename handle_t, typename context_t = void >
     struct resource
     {
-        using deleter_fn = std::function< void( HandleType, Context* ) >;
+        using deleter_fn = std::function< void( handle_t, context_t* ) >;
 
         resource( const resource& )            = delete;
         resource& operator=( const resource& ) = delete;
@@ -42,14 +42,14 @@ namespace sl::vk::core
         {
             if ( this != &r )
             {
-                if ( _handle != NullHandle )
+                if ( _handle != nullptr )
                     _deleter( _handle, _context );
 
                 _handle  = r._handle;
                 _deleter = r._deleter;
                 _context = r._context;
 
-                r._handle  = NullHandle;
+                r._handle  = nullptr;
                 r._context = nullptr;
             }
 
@@ -57,7 +57,7 @@ namespace sl::vk::core
         }
 
         resource() noexcept
-            : _handle { NullHandle }
+            : _handle { nullptr }
             , _context { nullptr }
         {}
 
@@ -66,11 +66,11 @@ namespace sl::vk::core
             , _deleter { r._deleter }
             , _context { r._context }
         {
-            r._handle  = NullHandle;
+            r._handle  = nullptr;
             r._context = nullptr;
         }
 
-        explicit resource( HandleType handle, deleter_fn deleter, Context* context = nullptr )
+        explicit resource( handle_t handle, deleter_fn deleter, context_t* context = nullptr )
             : _handle { handle }
             , _deleter { deleter }
             , _context { context }
@@ -78,20 +78,20 @@ namespace sl::vk::core
 
         virtual ~resource() noexcept
         {
-            if ( NullHandle != _handle )
+            if ( nullptr != _handle )
                 _deleter( _handle, _context );
         }
 
-        operator HandleType() const noexcept { return _handle; }
+        operator handle_t() const noexcept { return _handle; }
 
         explicit operator bool() const noexcept { return _handle; }
 
-        HandleType get() const { return _handle; }
+        handle_t get() const { return _handle; }
 
     private:
-        HandleType _handle;
+        handle_t _handle;
         deleter_fn _deleter;
-        Context* _context;
+        context_t* _context;
     };
 
 }   // namespace sl::vk::core

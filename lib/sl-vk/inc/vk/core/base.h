@@ -37,7 +37,7 @@ namespace sl::vk::core
 {
 
     /**
-     * Workaround to the below 'Impl' template not being complete at the time
+     * Workaround to the below 'impl_t' template not being complete at the time
      * we need the internal device function table typedef.
      */
     template< typename impl_t >
@@ -50,7 +50,7 @@ namespace sl::vk::core
      * initialized, and fetches function addresses into the system.
      *
      * An example of a loader would be 'Volk' which we provide a
-     * simple wrapper around below [struct loadtemplate er].
+     * simple wrapper around in sl::vk::core::loader.
      *
      * This is standard CRTP pattern for compile-time polymorphism.
      */
@@ -101,7 +101,7 @@ namespace sl::vk::core
      *
      * This is standard CRTP pattern for compile-time polymorphism.
      */
-    template< typename Impl >
+    template< typename impl_t >
     struct app_configurator
     {
         const char* application_name() const { return self().application_name(); }
@@ -115,7 +115,7 @@ namespace sl::vk::core
         auto enabled_extensions() const { return self().enabled_extensions(); }
 
     private:
-        inline Impl const& self() const { return static_cast< Impl const& >( *this ); }
+        inline impl_t const& self() const { return static_cast< impl_t const& >( *this ); }
     };
 
 
@@ -125,14 +125,14 @@ namespace sl::vk::core
      *
      * This is standard CRTP pattern for compile-time polymorphism.
      */
-    template< typename Impl >
+    template< typename impl_t >
     struct device_configurator
     {
         auto enabled_extensions() const { return self().enabled_extensions(); }
         auto enabled_features() const { return self().enabled_features(); }
 
     private:
-        inline Impl const& self() const { return static_cast< Impl const& >( *this ); }
+        inline impl_t const& self() const { return static_cast< impl_t const& >( *this ); }
     };
 
 }   // namespace sl::vk::core

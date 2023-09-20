@@ -54,8 +54,8 @@ namespace sl::vk::core
                                       device_feature::wide_lines >
         device_features_iterator;
 
-    template< typename Fn >
-    inline void for_each_device_feature( Fn fn )
+    template< typename fn_t >
+    inline void for_each_device_feature( fn_t fn )
     {
         for ( auto f : device_features_iterator {} )
             fn( f );

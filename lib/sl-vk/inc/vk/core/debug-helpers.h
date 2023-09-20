@@ -168,9 +168,9 @@ case core::device_feature::e:                                                   
             return ext.extensionName;
         }
 
-        template< typename Logger >
+        template< typename logger_t >
         void
-        dump_features( Logger& logger, const core::physical_device& device, const char* indent )
+        dump_features( logger_t& logger, const core::physical_device& device, const char* indent )
         {
             auto log_f = [&]( const core::device_feature feature ) {
                 logger.trace( "%s %s: %s",
@@ -182,8 +182,8 @@ case core::device_feature::e:                                                   
             core::for_each_device_feature( log_f );
         }
 
-        template< typename Logger, typename PTypeItems >
-        void dump_properties( Logger& logger, PTypeItems props, const char* indent )
+        template< typename logger_t, typename props_t >
+        void dump_properties( logger_t& logger, props_t props, const char* indent )
         {
             std::for_each(
                 std::begin( props ), std::end( props ), [&logger, indent]( const auto& x ) {
@@ -199,8 +199,8 @@ case core::device_feature::e:                                                   
      * This should be a collection of methods with type overrides.
      */
 
-    template< typename Logger, typename Loader >
-    void log_diagnostics( Logger& logger, const core::loader_base< Loader >& loader )
+    template< typename logger_t, typename loader_t >
+    void log_diagnostics( logger_t& logger, const core::loader_base< loader_t >& loader )
     {
         char scratch[20];
         auto buf = std::span( scratch );
@@ -219,8 +219,8 @@ case core::device_feature::e:                                                   
         priv::dump_properties( logger, exts, "  >>>" );
     }
 
-    template< typename Logger, typename Configurator >
-    void log_diagnostics( Logger& logger, const app_configurator< Configurator >& cfg )
+    template< typename logger_t, typename configurator_t >
+    void log_diagnostics( logger_t& logger, const app_configurator< configurator_t >& cfg )
     {
         char scratch[16];
         auto buf = std::span( scratch );
@@ -243,8 +243,8 @@ case core::device_feature::e:                                                   
         priv::dump_properties( logger, exts, "    +++" );
     }
 
-    template< typename Logger, typename Configurator >
-    void log_diagnostics( Logger& logger, const device_configurator< Configurator >& cfg )
+    template< typename logger_t, typename configurator_t >
+    void log_diagnostics( logger_t& logger, const device_configurator< configurator_t >& cfg )
     {
         logger.trace( "Vulkan device configuration:" );
 
@@ -261,8 +261,8 @@ case core::device_feature::e:                                                   
                        } );
     }
 
-    template< typename Logger >
-    void log_diagnostics( Logger& logger, const sl::vk::core::physical_device& device )
+    template< typename logger_t >
+    void log_diagnostics( logger_t& logger, const sl::vk::core::physical_device& device )
     {
         char scratch[20];
         auto buf = std::span( scratch );
@@ -317,8 +317,8 @@ case core::device_feature::e:                                                   
         priv::dump_features( logger, device, "     -> " );
     }
 
-    template< typename Logger >
-    void log_diagnostics( Logger& logger,
+    template< typename logger_t >
+    void log_diagnostics( logger_t& logger,
                           const std::span< const sl::vk::core::physical_device > devices )
     {
         std::for_each( std::begin( devices ), std::end( devices ), [&logger]( const auto& device ) {

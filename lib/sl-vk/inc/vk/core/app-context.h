@@ -37,9 +37,9 @@ namespace sl::vk::core
     namespace priv
     {
 
-        template< typename Loader, typename Configurator >
-        auto create_instance( const core::loader_base< Loader >& loader,
-                              const core::app_configurator< Configurator >& cfg )
+        template< typename loader_t, typename configurator_t >
+        auto create_instance( const core::loader_base< loader_t >& loader,
+                              const core::app_configurator< configurator_t >& cfg )
         {
             auto enabled_exts   = cfg.enabled_extensions();
             auto enabled_layers = cfg.enabled_layers();
@@ -61,10 +61,10 @@ namespace sl::vk::core
             return loader.create_instance( create_info );
         }
 
-        template< typename Loader, typename DebugHandler >
-        auto create_debug_messenger( const core::loader_base< Loader >& loader,
+        template< typename loader_t, typename debug_handler_t >
+        auto create_debug_messenger( const core::loader_base< loader_t >& loader,
                                      const core::instance& inst,
-                                     DebugHandler debug_handler )
+                                     debug_handler_t debug_handler )
         {
             auto ci            = core::debug_utils_messenger_create_info_ext {};
             ci.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
@@ -106,9 +106,9 @@ namespace sl::vk::core
         core::debug_utils_messenger _debug;
     };
 
-    template< typename Loader, typename Configurator >
-    auto make_app_context( const core::loader_base< Loader >& loader,
-                           const core::app_configurator< Configurator >& cfg )
+    template< typename loader_t, typename configurator_t >
+    auto make_app_context( const core::loader_base< loader_t >& loader,
+                           const core::app_configurator< configurator_t >& cfg )
     {
         auto inst = priv::create_instance( loader, cfg );
         auto gpus = loader.get_physical_devices( inst );
@@ -116,10 +116,10 @@ namespace sl::vk::core
         return core::app_context { std::move( inst ), std::move( gpus ) };
     }
 
-    template< typename Loader, typename Configurator, typename DebugHandler >
-    auto make_app_context( const core::loader_base< Loader >& loader,
-                           const core::app_configurator< Configurator >& cfg,
-                           DebugHandler debug_handler )
+    template< typename loader_t, typename configurator_t, typename debug_handler_t >
+    auto make_app_context( const core::loader_base< loader_t >& loader,
+                           const core::app_configurator< configurator_t >& cfg,
+                           debug_handler_t debug_handler )
     {
         auto inst = priv::create_instance( loader, cfg );
         auto gpus = loader.get_physical_devices( inst );

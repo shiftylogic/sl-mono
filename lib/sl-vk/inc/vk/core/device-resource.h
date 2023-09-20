@@ -30,46 +30,43 @@
 namespace sl::vk::core
 {
 
-    template< typename HandleType,
-              typename DeviceType,
-              typename Context = void,
-              auto NullHandle  = nullptr >
-    struct device_resource : sl::vk::core::resource< HandleType, Context, NullHandle >
+    template< typename handle_t, typename device_t, typename context_t = void >
+    struct device_resource : sl::vk::core::resource< handle_t, context_t >
     {
-        using deleter_fn = std::function< void( DeviceType, HandleType, Context* ) >;
+        using deleter_fn = std::function< void( device_t, handle_t, context_t* ) >;
 
         device_resource& operator=( device_resource&& r ) noexcept
         {
             if ( this != &r )
             {
-                vk::core::resource< HandleType, Context, NullHandle >::operator=(
-                    std::forward< vk::core::resource< HandleType, Context, NullHandle > >( r ) );
+                vk::core::resource< handle_t, context_t >::operator=(
+                    std::forward< vk::core::resource< handle_t, context_t > >( r ) );
 
                 _device   = r._device;
-                r._device = NullHandle;
+                r._device = nullptr;
             }
 
             return *this;
         }
 
         device_resource() noexcept
-            : vk::core::resource< HandleType, Context, NullHandle > {}
-            , _device { NullHandle }
+            : vk::core::resource< handle_t, context_t > {}
+            , _device { nullptr }
         {}
 
         device_resource( device_resource&& r ) noexcept
-            : vk::core::resource< HandleType, Context, NullHandle >(
-                std::forward< vk::core::resource< HandleType, Context, NullHandle > >( r ) )
+            : vk::core::resource< handle_t, context_t >(
+                std::forward< vk::core::resource< handle_t, context_t > >( r ) )
             , _device( r._device )
         {
-            r._device = NullHandle;
+            r._device = nullptr;
         }
 
-        explicit device_resource( DeviceType device,
-                                  HandleType handle,
+        explicit device_resource( device_t device,
+                                  handle_t handle,
                                   deleter_fn deleter,
-                                  Context* context = nullptr )
-            : vk::core::resource< HandleType, Context, NullHandle >(
+                                  context_t* context = nullptr )
+            : vk::core::resource< handle_t, context_t >(
                 handle,
                 std::bind( deleter, device, std::placeholders::_1, std::placeholders::_2 ),
                 context )
@@ -77,7 +74,7 @@ namespace sl::vk::core
         {}
 
     private:
-        DeviceType _device;
+        device_t _device;
     };
 
 }   // namespace sl::vk::core

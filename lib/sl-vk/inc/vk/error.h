@@ -41,8 +41,8 @@ namespace sl::vk
             , _code { code }
         {}
 
-        template< typename Logger >
-        void log( Logger& logger ) const
+        template< typename logger_t >
+        void log( logger_t& logger ) const
         {
             logger.error( "*** Vulkan Error *** '%s' failed: %s (Code: %d)", _api, what(), _code );
         }

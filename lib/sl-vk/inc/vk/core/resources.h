@@ -36,25 +36,23 @@ namespace sl::vk::core
      * Core Vulkan Resources
      */
 
-    using device   = vk::core::resource< VkDevice, const VkAllocationCallbacks, VK_NULL_HANDLE >;
-    using instance = vk::core::resource< VkInstance, const VkAllocationCallbacks, VK_NULL_HANDLE >;
+    using device   = vk::core::resource< VkDevice, const VkAllocationCallbacks >;
+    using instance = vk::core::resource< VkInstance, const VkAllocationCallbacks >;
 
 
     /*
      * Instance-specific Vulkan Resources
      */
 
-    using debug_utils_messenger = vk::core::device_resource< VkDebugUtilsMessengerEXT,
-                                                             VkInstance,
-                                                             const VkAllocationCallbacks,
-                                                             VK_NULL_HANDLE >;
+    using debug_utils_messenger = vk::core::
+        device_resource< VkDebugUtilsMessengerEXT, VkInstance, const VkAllocationCallbacks >;
 
     /*
      * Device-specific Vulkan Resources
      */
 
-    using shader_module = vk::core::
-        device_resource< VkShaderModule, VkDevice, const VkAllocationCallbacks, VK_NULL_HANDLE >;
+    using shader_module
+        = vk::core::device_resource< VkShaderModule, VkDevice, const VkAllocationCallbacks >;
 
 }   // namespace sl::vk::core
 
