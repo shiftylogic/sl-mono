@@ -177,7 +177,14 @@ namespace sl::vk::core
                     VkPhysicalDeviceFeatures features;
                     ::vkGetPhysicalDeviceFeatures( device_handle, &features );
 
-                    return physical_device { device_handle, props, memory_props, features };
+                    // Fetch the queue properties
+                    uint32_t count = 0;
+                    ::vkGetPhysicalDeviceQueueFamilyProperties( device_handle, &count, nullptr );
+                    std::vector< VkQueueFamilyProperties > qfps( count );
+                    ::vkGetPhysicalDeviceQueueFamilyProperties(
+                        device_handle, &count, qfps.data() );
+
+                    return physical_device { device_handle, props, memory_props, features, qfps };
                 } );
 
             return devices;

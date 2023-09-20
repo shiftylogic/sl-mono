@@ -136,6 +136,7 @@ namespace
 
         auto enabled_extensions() const { return k_extensions; }
         auto enabled_features() const { return k_features; }
+        auto queues() const { return std::make_tuple( 0, 1, 2 ); }
     };
 
 }   // namespace

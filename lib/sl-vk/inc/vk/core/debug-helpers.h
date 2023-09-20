@@ -29,6 +29,8 @@
 #include <functional>
 #include <span>
 
+#include <utils/strings.h>
+
 #include <vk/core/loader.h>
 #include <vk/core/physical-device.h>
 
@@ -85,6 +87,46 @@ case core::device_feature::e:                                                   
             }
 
 #undef DEVICE_FEATURE_STRING_CASE
+        }
+
+        std::string memory_type_flags_string( VkMemoryPropertyFlags flags )
+        {
+            uint32_t index = 0;
+            std::array< const char*, 6 > arr;
+
+            if ( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT & flags )
+                arr[index++] = "DEVICE_LOCAL";
+            if ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT & flags )
+                arr[index++] = "HOST_VISIBLE";
+            if ( VK_MEMORY_PROPERTY_HOST_COHERENT_BIT & flags )
+                arr[index++] = "HOST_COHERENT";
+            if ( VK_MEMORY_PROPERTY_HOST_CACHED_BIT & flags )
+                arr[index++] = "HOST_CACHED";
+            if ( VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT & flags )
+                arr[index++] = "LAZY";
+            if ( VK_MEMORY_PROPERTY_PROTECTED_BIT & flags )
+                arr[index++] = "PROTECTED";
+
+            return sl::utils::join( std::span( &arr[0], index ) );
+        }
+
+        std::string queue_flags_string( VkQueueFlags flags )
+        {
+            uint32_t index = 0;
+            std::array< const char*, 5 > arr;
+
+            if ( VK_QUEUE_GRAPHICS_BIT & flags )
+                arr[index++] = "GRAPHICS";
+            if ( VK_QUEUE_COMPUTE_BIT & flags )
+                arr[index++] = "COMPUTE";
+            if ( VK_QUEUE_TRANSFER_BIT & flags )
+                arr[index++] = "TRANSFER";
+            if ( VK_QUEUE_SPARSE_BINDING_BIT & flags )
+                arr[index++] = "SPARSE";
+            if ( VK_QUEUE_PROTECTED_BIT & flags )
+                arr[index++] = "PROTECTED";
+
+            return sl::utils::join( std::span( &arr[0], index ) );
         }
 
         /**
@@ -259,6 +301,12 @@ case core::device_feature::e:                                                   
                        [&logger]( const core::device_feature feature ) {
                            logger.trace( "    +++ %s", priv::device_feature_string( feature ) );
                        } );
+
+        auto [gfx, compute, tx] = cfg.queues();
+        logger.trace( "  -> Selected Queues:" );
+        logger.trace( "    >>> Compute:   %i", compute );
+        logger.trace( "    >>> Graphics:  %i", gfx );
+        logger.trace( "    >>> Transfter: %i", tx );
     }
 
     template< typename logger_t >
@@ -273,6 +321,23 @@ case core::device_feature::e:                                                   
                       priv::api_to_string( device.api_version(), buf ) );
         logger.trace( "    > Driver Version: 0x%08x", device.driver_version() );
         logger.trace( "    > Device Type:    %s", priv::device_type_string( device.type() ) );
+
+        auto queues = device.queues();
+        logger.trace( "    > Queue Families (%d):", queues.size() );
+        for ( const auto& q : queues )
+        {
+            auto flags = priv::queue_flags_string( q.queueFlags );
+            logger.trace( "      -> [Count: %d] %s", q.queueCount, flags.c_str() );
+        }
+
+        auto mem = device.memory_properties();
+        logger.trace( "    > Memory Types (%d):", mem.memoryTypeCount );
+        for ( uint32_t i = 0; i < mem.memoryTypeCount; ++i )
+        {
+            const auto& mt = mem.memoryTypes[i];
+            auto flags     = priv::memory_type_flags_string( mt.propertyFlags );
+            logger.trace( "      -> [Heap Index: %d] %s", mt.heapIndex, flags.c_str() );
+        }
 
         const auto& limits = device.limits();
         logger.trace( "    > Device Limits:" );

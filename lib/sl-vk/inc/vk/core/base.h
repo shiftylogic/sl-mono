@@ -130,6 +130,7 @@ namespace sl::vk::core
     {
         auto enabled_extensions() const { return self().enabled_extensions(); }
         auto enabled_features() const { return self().enabled_features(); }
+        std::tuple< uint32_t, uint32_t, uint32_t > queues() const { return self().queues(); }
 
     private:
         inline impl_t const& self() const { return static_cast< impl_t const& >( *this ); }
