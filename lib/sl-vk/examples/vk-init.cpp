@@ -31,6 +31,7 @@
 #include <vk/core/app-context.h>
 #include <vk/core/debug-helpers.h>
 #include <vk/core/loader.h>
+#include <vk/core/logical-device.h>
 
 namespace
 {
@@ -74,7 +75,7 @@ namespace
         return VK_FALSE;
     }
 
-    struct app_configurator
+    struct app_configurator : sl::vk::core::app_configurator< app_configurator >
     {
         static constexpr std::array k_layers = {
             "VK_LAYER_KHRONOS_validation",
@@ -94,7 +95,7 @@ namespace
 
 
         /**
-         * Required interface for passing this struct to make_app_context
+         * Required interface for passing this struct to app_context ctor
          * as an application configurator.
          */
 
@@ -108,8 +109,33 @@ namespace
 
         auto instance_flags() const { return VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; }
 
-        auto enabled_layers() const { return k_layers; }   // return std::span< const char* > {}; }
+        auto enabled_layers() const { return k_layers; }
         auto enabled_extensions() const { return k_extensions; }
+    };
+
+    struct device_configurator : sl::vk::core::device_configurator< device_configurator >
+    {
+        static constexpr std::array k_extensions = {
+            "VK_KHR_bind_memory2",
+            "VK_KHR_dedicated_allocation",
+            "VK_KHR_get_memory_requirements2",
+            "VK_KHR_portability_subset",
+        };
+
+        static constexpr std::array k_features = {
+            sl::vk::core::device_feature::anisotropic_filtering,
+            sl::vk::core::device_feature::depth_clamp,
+            sl::vk::core::device_feature::fill_mode_non_solid,
+            sl::vk::core::device_feature::multi_draw_indirect,
+        };
+
+        /**
+         * Required interface for passing this struct to logical_device ctor
+         * to be used for device configuration.
+         */
+
+        auto enabled_extensions() const { return k_extensions; }
+        auto enabled_features() const { return k_features; }
     };
 
 }   // namespace
@@ -128,13 +154,23 @@ int main()
         sl::vk::core::debug::log_diagnostics( logger, loader );
         sl::vk::core::debug::log_diagnostics( logger, app_config );
 
-        logger.info( "Initializing application context..." );
-        auto app_context = sl::vk::core::app_context { loader, app_config };
-        app_context.enable_debug( handle_vulkan_debug );
+        logger.info( "Creating an application context..." );
+        auto app_context
+            = sl::vk::core::make_app_context( loader, app_config, handle_vulkan_debug );
 
         logger.info( "Enumerating GPU devices..." );
-        auto physical_devices = app_context.get_physical_devices();
-        sl::vk::core::debug::log_diagnostics( logger, std::span( physical_devices ) );
+        auto gpus = app_context.gpus();
+        sl::vk::core::debug::log_diagnostics( logger, gpus );
+
+        // TODO: Select a device based on some scoring algorithm...
+        //       For now, just grab the first one.
+        const auto& gpu = gpus[0];
+
+        logger.info( "Creating a logical device..." );
+        auto device_config = device_configurator {};
+        sl::vk::core::debug::log_diagnostics( logger, device_config );
+
+        auto device = sl::vk::core::make_logical_device( loader, app_context, gpu, device_config );
 
         logger.info( "Shutting down..." );
     }

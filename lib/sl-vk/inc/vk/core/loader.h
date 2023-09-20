@@ -26,22 +26,31 @@
 #define __LOADER_H_563420A83E5945238A07F6B49AEAC37C__
 
 #include <functional>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
-#include <vulkan.h>
-
-#include <vk/core/resources.h>
-#include <vk/core/structs.h>
+#include <vk/core/base.h>
 #include <vk/error.h>
-
-#include <vk/core/physical-device.h>
 
 namespace sl::vk::core
 {
 
-    struct loader
+    struct loader;
+
+    /**
+     * Specialization of device_functions_traits for the device_functions_t type
+     * used in the sl::vk::core::loader default loader.
+     */
+    template<>
+    struct device_functions_traits< core::loader >
     {
-        using device_table = ::VolkDeviceTable;
+        using type = ::VolkDeviceTable;
+    };
+
+    struct loader : loader_base< loader >
+    {
+        static_assert( std::is_base_of< device_functions_t, VolkDeviceTable >::value );
 
         explicit loader()
         {
@@ -121,6 +130,21 @@ namespace sl::vk::core
             return core::debug_utils_messenger { inst, debug, ::vkDestroyDebugUtilsMessengerEXT };
         }
 
+        auto create_device( const core::instance&,
+                            const core::physical_device& gpu,
+                            const core::device_create_info& ci ) const
+        {
+            VkDevice device;
+            vk::error::throw_if_error( "vkCreateDevice",
+                                       ::vkCreateDevice( gpu, &ci, nullptr, &device ),
+                                       "failed to create logical device" );
+
+            VolkDeviceTable vkFuncs;
+            ::volkLoadDeviceTable( &vkFuncs, device );
+
+            return std::make_tuple( core::device { device, vkFuncs.vkDestroyDevice }, vkFuncs );
+        }
+
         auto get_physical_devices( const core::instance& inst ) const
         {
             uint32_t count;
@@ -139,19 +163,22 @@ namespace sl::vk::core
             std::vector< core::physical_device > devices;
             devices.reserve( device_handles.size() );
 
-            std::transform( std::begin( device_handles ),
-                            std::end( device_handles ),
-                            std::back_inserter( devices ),
-                            []( auto device_handle ) {
-                                VkPhysicalDeviceProperties props;
-                                ::vkGetPhysicalDeviceProperties( device_handle, &props );
+            std::transform(
+                std::begin( device_handles ),
+                std::end( device_handles ),
+                std::back_inserter( devices ),
+                []( auto device_handle ) {
+                    VkPhysicalDeviceProperties props;
+                    ::vkGetPhysicalDeviceProperties( device_handle, &props );
 
-                                VkPhysicalDeviceMemoryProperties memory_props;
-                                ::vkGetPhysicalDeviceMemoryProperties( device_handle,
-                                                                       &memory_props );
+                    VkPhysicalDeviceMemoryProperties memory_props;
+                    ::vkGetPhysicalDeviceMemoryProperties( device_handle, &memory_props );
 
-                                return physical_device { device_handle, props, memory_props };
-                            } );
+                    VkPhysicalDeviceFeatures features;
+                    ::vkGetPhysicalDeviceFeatures( device_handle, &features );
+
+                    return physical_device { device_handle, props, memory_props, features };
+                } );
 
             return devices;
         }

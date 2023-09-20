@@ -25,6 +25,8 @@
 #ifndef __PHYSICAL_DEVICE_H_64D8DD3EE39D4B10ACAF141EA387AF27__
 #define __PHYSICAL_DEVICE_H_64D8DD3EE39D4B10ACAF141EA387AF27__
 
+#include <vk/core/device-feature.h>
+
 namespace sl::vk::core
 {
 
@@ -32,10 +34,12 @@ namespace sl::vk::core
     {
         explicit physical_device( VkPhysicalDevice device,
                                   VkPhysicalDeviceProperties properties,
-                                  VkPhysicalDeviceMemoryProperties memory_properties )
+                                  VkPhysicalDeviceMemoryProperties memory_properties,
+                                  VkPhysicalDeviceFeatures features )
             : _device { device }
             , _properties { properties }
             , _memory_properties { memory_properties }
+            , _features { features }
         {}
 
         operator VkPhysicalDevice() const noexcept { return _device; }
@@ -48,10 +52,16 @@ namespace sl::vk::core
 
         const auto& memory_properties() const { return _memory_properties; }
 
+        bool has_feature( core::device_feature feature ) const
+        {
+            return core::has_device_feature( _features, feature );
+        }
+
     private:
         const VkPhysicalDevice _device;
         const VkPhysicalDeviceProperties _properties;
         const VkPhysicalDeviceMemoryProperties _memory_properties;
+        const VkPhysicalDeviceFeatures _features;
     };
 
 }   // namespace sl::vk::core

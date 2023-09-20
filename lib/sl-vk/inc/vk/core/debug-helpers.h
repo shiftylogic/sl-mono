@@ -57,6 +57,36 @@ namespace sl::vk::core::debug
             }
         }
 
+        const char* device_feature_string( device_feature feature )
+        {
+#define DEVICE_FEATURE_STRING_CASE( e, s )                                                         \
+case core::device_feature::e:                                                                      \
+    return s
+
+            switch ( feature )
+            {
+                DEVICE_FEATURE_STRING_CASE( anisotropic_filtering, "Anisotropic Filtering" );
+                DEVICE_FEATURE_STRING_CASE( depth_bounds, "Depth Bounds Tests" );
+                DEVICE_FEATURE_STRING_CASE( dual_src_blend, "Dual Source Blend Operations" );
+                DEVICE_FEATURE_STRING_CASE( depth_clamp, "Depth Clamping" );
+                DEVICE_FEATURE_STRING_CASE( depth_bias_clamp, "Depth Bias Clamping" );
+                DEVICE_FEATURE_STRING_CASE( fill_mode_non_solid, "Point and Wireframe Fill Mode" );
+                DEVICE_FEATURE_STRING_CASE( geometry_shader, "Geometry Shader" );
+                DEVICE_FEATURE_STRING_CASE( large_points, "Large Points" );
+                DEVICE_FEATURE_STRING_CASE( logic_op, "Logic Operations" );
+                DEVICE_FEATURE_STRING_CASE( multi_draw_indirect, "Multiple Draw Indirect" );
+                DEVICE_FEATURE_STRING_CASE( multi_viewport, "Multi Viewport" );
+                DEVICE_FEATURE_STRING_CASE( robust_buffer_access,
+                                            "Bounds-checked Buffer Descriptors" );
+                DEVICE_FEATURE_STRING_CASE( sample_rate_shading,
+                                            "Sample Shading + Multisample Interpolation" );
+                DEVICE_FEATURE_STRING_CASE( tessellation_shader, "Tessellation Shader" );
+                DEVICE_FEATURE_STRING_CASE( wide_lines, "Wide Lines" );
+            }
+
+#undef DEVICE_FEATURE_STRING_CASE
+        }
+
         /**
          * Turns a uint32_t API version number into a display string.
          *
@@ -138,6 +168,20 @@ namespace sl::vk::core::debug
             return ext.extensionName;
         }
 
+        template< typename Logger >
+        void
+        dump_features( Logger& logger, const core::physical_device& device, const char* indent )
+        {
+            auto log_f = [&]( const core::device_feature feature ) {
+                logger.trace( "%s %s: %s",
+                              indent,
+                              device_feature_string( feature ),
+                              device.has_feature( feature ) ? "Yes" : "No" );
+            };
+
+            core::for_each_device_feature( log_f );
+        }
+
         template< typename Logger, typename PTypeItems >
         void dump_properties( Logger& logger, PTypeItems props, const char* indent )
         {
@@ -155,8 +199,8 @@ namespace sl::vk::core::debug
      * This should be a collection of methods with type overrides.
      */
 
-    template< typename Logger >
-    void log_diagnostics( Logger& logger, const sl::vk::core::loader& loader )
+    template< typename Logger, typename Loader >
+    void log_diagnostics( Logger& logger, const core::loader_base< Loader >& loader )
     {
         char scratch[20];
         auto buf = std::span( scratch );
@@ -175,8 +219,8 @@ namespace sl::vk::core::debug
         priv::dump_properties( logger, exts, "  >>>" );
     }
 
-    template< typename Logger, typename AppConfigurator >
-    void log_diagnostics( Logger& logger, const AppConfigurator& cfg )
+    template< typename Logger, typename Configurator >
+    void log_diagnostics( Logger& logger, const app_configurator< Configurator >& cfg )
     {
         char scratch[16];
         auto buf = std::span( scratch );
@@ -197,6 +241,24 @@ namespace sl::vk::core::debug
         auto exts = cfg.enabled_extensions();
         logger.trace( "  -> Enabled Extensions:" );
         priv::dump_properties( logger, exts, "    +++" );
+    }
+
+    template< typename Logger, typename Configurator >
+    void log_diagnostics( Logger& logger, const device_configurator< Configurator >& cfg )
+    {
+        logger.trace( "Vulkan device configuration:" );
+
+        auto exts = cfg.enabled_extensions();
+        logger.trace( "  -> Enabled Extensions:" );
+        priv::dump_properties( logger, exts, "    +++" );
+
+        auto features = cfg.enabled_features();
+        logger.trace( "  -> Enabled Features:" );
+        std::for_each( std::begin( features ),
+                       std::end( features ),
+                       [&logger]( const core::device_feature feature ) {
+                           logger.trace( "    +++ %s", priv::device_feature_string( feature ) );
+                       } );
     }
 
     template< typename Logger >
@@ -250,10 +312,14 @@ namespace sl::vk::core::debug
                       limits.minStorageBufferOffsetAlignment );
         logger.trace( "      -> Uniform Buffer Alignment:                  %lu",
                       limits.minUniformBufferOffsetAlignment );
+
+        logger.trace( "   > Device Features:" );
+        priv::dump_features( logger, device, "     -> " );
     }
 
     template< typename Logger >
-    void log_diagnostics( Logger& logger, const std::span< sl::vk::core::physical_device > devices )
+    void log_diagnostics( Logger& logger,
+                          const std::span< const sl::vk::core::physical_device > devices )
     {
         std::for_each( std::begin( devices ), std::end( devices ), [&logger]( const auto& device ) {
             log_diagnostics( logger, device );

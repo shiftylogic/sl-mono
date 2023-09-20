@@ -25,8 +25,10 @@
 #ifndef __APP_CONTEXT_H_695CFE28DC364AC0BDBB28804FB77F87__
 #define __APP_CONTEXT_H_695CFE28DC364AC0BDBB28804FB77F87__
 
-#include <vk/core/resources.h>
-#include <vk/core/structs.h>
+#include <span>
+#include <vector>
+
+#include <vk/core/base.h>
 #include <vk/error.h>
 
 namespace sl::vk::core
@@ -35,8 +37,9 @@ namespace sl::vk::core
     namespace priv
     {
 
-        template< typename Loader, typename AppConfigurator >
-        auto create_instance( Loader& loader, const AppConfigurator& cfg )
+        template< typename Loader, typename Configurator >
+        auto create_instance( const core::loader_base< Loader >& loader,
+                              const core::app_configurator< Configurator >& cfg )
         {
             auto enabled_exts   = cfg.enabled_extensions();
             auto enabled_layers = cfg.enabled_layers();
@@ -58,22 +61,12 @@ namespace sl::vk::core
             return loader.create_instance( create_info );
         }
 
-    }   // namespace priv
-
-    template< typename Loader, typename AppConfigurator >
-    struct app_context
-    {
-        explicit app_context( const Loader& loader, const AppConfigurator& cfg )
-            : _loader { loader }
-            , _instance { priv::create_instance( loader, cfg ) }
-        {}
-
-        auto get_physical_devices() const { return _loader.get_physical_devices( _instance ); }
-
-        template< typename DebugHandler >
-        void enable_debug( DebugHandler debug_handler )
+        template< typename Loader, typename DebugHandler >
+        auto create_debug_messenger( const core::loader_base< Loader >& loader,
+                                     const core::instance& inst,
+                                     DebugHandler debug_handler )
         {
-            core::debug_utils_messenger_create_info_ext ci;
+            auto ci            = core::debug_utils_messenger_create_info_ext {};
             ci.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
                                  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
                                  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -83,14 +76,58 @@ namespace sl::vk::core
             ci.pfnUserCallback = *debug_handler;
             ci.pUserData       = nullptr;
 
-            _debug = _loader.create_debug_messenger( _instance, ci );
+            return loader.create_debug_messenger( inst, ci );
         }
 
+    }   // namespace priv
+
+    struct app_context
+    {
+        explicit app_context( core::instance&& inst, std::vector< core::physical_device >&& gpus )
+            : _instance { std::move( inst ) }
+            , _gpus { std::move( gpus ) }
+        {}
+
+        explicit app_context( core::instance&& inst,
+                              std::vector< core::physical_device >&& gpus,
+                              core::debug_utils_messenger&& debug )
+            : _instance { std::move( inst ) }
+            , _gpus { std::move( gpus ) }
+            , _debug { std::move( debug ) }
+        {}
+
+        operator const core::instance&() const noexcept { return _instance; }
+
+        auto gpus() const { return std::span { _gpus }; }
+
     private:
-        const Loader& _loader;
         const core::instance _instance;
+        const std::vector< core::physical_device > _gpus;
         core::debug_utils_messenger _debug;
     };
+
+    template< typename Loader, typename Configurator >
+    auto make_app_context( const core::loader_base< Loader >& loader,
+                           const core::app_configurator< Configurator >& cfg )
+    {
+        auto inst = priv::create_instance( loader, cfg );
+        auto gpus = loader.get_physical_devices( inst );
+
+        return core::app_context { std::move( inst ), std::move( gpus ) };
+    }
+
+    template< typename Loader, typename Configurator, typename DebugHandler >
+    auto make_app_context( const core::loader_base< Loader >& loader,
+                           const core::app_configurator< Configurator >& cfg,
+                           DebugHandler debug_handler )
+    {
+        auto inst = priv::create_instance( loader, cfg );
+        auto gpus = loader.get_physical_devices( inst );
+
+        return core::app_context { std::move( inst ),
+                                   std::move( gpus ),
+                                   priv::create_debug_messenger( loader, inst, debug_handler ) };
+    }
 
 }   // namespace sl::vk::core
 
