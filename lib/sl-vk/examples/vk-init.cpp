@@ -32,6 +32,8 @@
 #include <vk/core/debug-helpers.h>
 #include <vk/core/loader.h>
 #include <vk/core/logical-device.h>
+#include <vk/mem/allocator.h>
+#include <vk/mem/buffers.h>
 
 namespace
 {
@@ -172,6 +174,35 @@ int main()
         sl::vk::core::debug::log_diagnostics( logger, device_config );
 
         auto device = sl::vk::core::make_logical_device( loader, app_context, gpu, device_config );
+
+        {
+            logger.info( "Creating allocator..." );
+            auto mem = sl::vk::mem::make_allocator( loader, device, VK_API_VERSION_1_1 );
+
+            logger.info( "Creating a staging buffer..." );
+            auto stbo = sl::vk::mem::make_staging_buffer( mem, 4096 );
+            logger.info( "   -> Host Visible? %s", stbo.is_host_visible() ? "YES" : "NO" );
+
+            logger.info( "Creating a readback buffer..." );
+            auto rbo = sl::vk::mem::make_readback_buffer( mem, 4096 );
+            logger.info( "   -> Host Visible? %s", rbo.is_host_visible() ? "YES" : "NO" );
+
+            logger.info( "Creating an index buffer..." );
+            auto ibo = sl::vk::mem::make_index_buffer( mem, 65536 );
+            logger.info( "   -> Host Visible? %s", ibo.is_host_visible() ? "YES" : "NO" );
+
+            logger.info( "Creating a vertex buffer..." );
+            auto vbo = sl::vk::mem::make_uniform_buffer( mem, 65536 );
+            logger.info( "   -> Host Visible? %s", vbo.is_host_visible() ? "YES" : "NO" );
+
+            logger.info( "Creating a storage buffer..." );
+            auto ssbo = sl::vk::mem::make_storage_buffer( mem, 65536 );
+            logger.info( "   -> Host Visible? %s", ssbo.is_host_visible() ? "YES" : "NO" );
+
+            logger.info( "Creating a uniform buffer..." );
+            auto ubo = sl::vk::mem::make_uniform_buffer( mem, 65536 );
+            logger.info( "   -> Host Visible? %s", ubo.is_host_visible() ? "YES" : "NO" );
+        }
 
         logger.info( "Shutting down..." );
     }

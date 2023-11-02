@@ -57,6 +57,11 @@ namespace sl::vk::core
                 _fns.vkGetDeviceQueue( _device, transfer_index, 0, &_transfer );
         }
 
+        const core::instance& instance() const noexcept { return _instance; }
+        const core::physical_device& gpu() const noexcept { return _gpu; }
+        const device_functions_t& function_table() const noexcept { return _fns; }
+        operator const core::device&() const noexcept { return _device; }
+
     private:
         const core::instance& _instance;
         const core::physical_device& _gpu;
