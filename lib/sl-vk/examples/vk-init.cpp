@@ -34,6 +34,7 @@
 #include <vk/core/logical-device.h>
 #include <vk/mem/allocator.h>
 #include <vk/mem/buffers.h>
+#include <vk/mem/images.h>
 
 namespace
 {
@@ -179,29 +180,41 @@ int main()
             logger.info( "Creating allocator..." );
             auto mem = sl::vk::mem::make_allocator( loader, device, VK_API_VERSION_1_1 );
 
-            logger.info( "Creating a staging buffer..." );
-            auto stbo = sl::vk::mem::make_staging_buffer( mem, 4096 );
-            logger.info( "   -> Host Visible? %s", stbo.is_host_visible() ? "YES" : "NO" );
+            {
+                logger.info( "Creating a staging buffer..." );
+                auto stbo = sl::vk::mem::make_staging_buffer( mem, 4096 );
+                logger.info( "   -> Host Visible? %s", stbo.is_host_visible() ? "YES" : "NO" );
 
-            logger.info( "Creating a readback buffer..." );
-            auto rbo = sl::vk::mem::make_readback_buffer( mem, 4096 );
-            logger.info( "   -> Host Visible? %s", rbo.is_host_visible() ? "YES" : "NO" );
+                logger.info( "Creating a readback buffer..." );
+                auto rbo = sl::vk::mem::make_readback_buffer( mem, 4096 );
+                logger.info( "   -> Host Visible? %s", rbo.is_host_visible() ? "YES" : "NO" );
 
-            logger.info( "Creating an index buffer..." );
-            auto ibo = sl::vk::mem::make_index_buffer( mem, 65536 );
-            logger.info( "   -> Host Visible? %s", ibo.is_host_visible() ? "YES" : "NO" );
+                logger.info( "Creating an index buffer..." );
+                auto ibo = sl::vk::mem::make_index_buffer( mem, 65536 );
+                logger.info( "   -> Host Visible? %s", ibo.is_host_visible() ? "YES" : "NO" );
 
-            logger.info( "Creating a vertex buffer..." );
-            auto vbo = sl::vk::mem::make_uniform_buffer( mem, 65536 );
-            logger.info( "   -> Host Visible? %s", vbo.is_host_visible() ? "YES" : "NO" );
+                logger.info( "Creating a vertex buffer..." );
+                auto vbo = sl::vk::mem::make_uniform_buffer( mem, 65536 );
+                logger.info( "   -> Host Visible? %s", vbo.is_host_visible() ? "YES" : "NO" );
 
-            logger.info( "Creating a storage buffer..." );
-            auto ssbo = sl::vk::mem::make_storage_buffer( mem, 65536 );
-            logger.info( "   -> Host Visible? %s", ssbo.is_host_visible() ? "YES" : "NO" );
+                logger.info( "Creating a storage buffer..." );
+                auto ssbo = sl::vk::mem::make_storage_buffer( mem, 65536 );
+                logger.info( "   -> Host Visible? %s", ssbo.is_host_visible() ? "YES" : "NO" );
 
-            logger.info( "Creating a uniform buffer..." );
-            auto ubo = sl::vk::mem::make_uniform_buffer( mem, 65536 );
-            logger.info( "   -> Host Visible? %s", ubo.is_host_visible() ? "YES" : "NO" );
+                logger.info( "Creating a uniform buffer..." );
+                auto ubo = sl::vk::mem::make_uniform_buffer( mem, 65536 );
+                logger.info( "   -> Host Visible? %s", ubo.is_host_visible() ? "YES" : "NO" );
+            }
+
+            {
+                logger.info( "Creating color attachment image..." );
+                auto color_image
+                    = sl::vk::mem::make_color_image( mem, 3840, 2160, VK_FORMAT_R8G8B8A8_UNORM );
+
+                logger.info( "Creating depth stencil attachment image..." );
+                auto depth_image
+                    = sl::vk::mem::make_depth_image( mem, 3840, 2160, VK_FORMAT_R8G8B8A8_UNORM );
+            }
         }
 
         logger.info( "Shutting down..." );

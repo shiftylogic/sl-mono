@@ -37,9 +37,9 @@ namespace sl::vk::mem
     {
         device_buffer( VmaAllocator allocator,
                        VkDeviceSize size,
-                       VkBufferUsageFlagBits usage_bits,
+                       VkBufferUsageFlags usage_bits,
                        VmaMemoryUsage memory_usage,
-                       VmaAllocationCreateFlagBits memory_flags )
+                       VmaAllocationCreateFlags memory_flags )
             : _allocator { allocator }
             , _allocation { VK_NULL_HANDLE }
             , _size { size }

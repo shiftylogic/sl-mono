@@ -30,11 +30,10 @@
 
 #include <vk/core/logical-device.h>
 #include <vk/mem/device-buffer.h>
+#include <vk/mem/device-image.h>
 
 namespace sl::vk::mem
 {
-
-    constexpr auto k_default_buffer_flags = static_cast< VmaAllocationCreateFlagBits >( 0 );
 
     struct allocator
     {
@@ -48,17 +47,34 @@ namespace sl::vk::mem
          **/
 
         auto create_buffer( VkDeviceSize size,
-                            VkBufferUsageFlagBits usage_bits,
+                            VkBufferUsageFlags usage_bits,
                             VmaMemoryUsage memory_usage,
-                            VmaAllocationCreateFlagBits memory_flags
-                            = k_default_buffer_flags ) const
+                            VmaAllocationCreateFlags memory_flags = 0 ) const
         {
             return mem::device_buffer {
                 _allocator.get(), size, usage_bits, memory_usage, memory_flags };
         }
 
+        auto create_image( uint32_t width,
+                           uint32_t height,
+                           VkFormat format,
+                           VkImageTiling tiling,
+                           VkImageUsageFlags image_usage,
+                           VmaMemoryUsage memory_usage,
+                           VmaAllocationCreateFlags memory_flags = 0 ) const
+        {
+            return mem::device_image { _allocator.get(),
+                                       width,
+                                       height,
+                                       format,
+                                       tiling,
+                                       image_usage,
+                                       memory_usage,
+                                       memory_flags };
+        }
+
     private:
-        using allocator_ptr_t = utils::custom_unique_ptr< VmaAllocator_T, vmaDestroyAllocator >;
+        using allocator_ptr_t = utils::custom_unique_ptr< VmaAllocator_T, ::vmaDestroyAllocator >;
 
         allocator_ptr_t _allocator;
     };
