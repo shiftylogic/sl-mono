@@ -49,6 +49,8 @@ namespace sl::vk::core
         wide_lines,
     };
 
+    constexpr auto k_no_device_features = std::span< device_feature > {};
+
     typedef sl::utils::enum_iterator< device_feature,
                                       device_feature::anisotropic_filtering,
                                       device_feature::wide_lines >

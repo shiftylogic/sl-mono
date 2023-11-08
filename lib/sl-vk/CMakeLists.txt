@@ -38,6 +38,7 @@ target_include_directories( ${PROJECT_NAME} INTERFACE
 target_link_libraries( ${PROJECT_NAME} INTERFACE
     sl-core
     vulkan
+    glm
 )
 
 target_compile_definitions( ${PROJECT_NAME} INTERFACE
@@ -57,6 +58,12 @@ target_compile_definitions( ${PROJECT_NAME} INTERFACE
 add_example(
     NAME vk-init
     SOURCES examples/vk-init.cpp
+    LIBRARIES ${PROJECT_NAME}
+)
+
+add_example(
+    NAME vk-compute
+    SOURCES examples/vk-compute.cpp
     LIBRARIES ${PROJECT_NAME}
 )
 
