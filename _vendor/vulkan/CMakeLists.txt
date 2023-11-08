@@ -44,6 +44,7 @@ endif()
 # Setup the library
 
 add_library( ${PROJECT_NAME} STATIC
+    src/spirv/spirv_reflect.cpp
     src/vma/vma.cpp
     src/volk/volk.c
 )
