@@ -1,3 +1,7 @@
+[![[linux] Build the world](https://github.com/shiftylogic/sl-mono/actions/workflows/build-linux.yml/badge.svg?branch=dev)](https://github.com/shiftylogic/sl-mono/actions/workflows/build-linux.yml)
+
+---
+
 # The Mono Repo
 A collection of code for many projects. Can be used as a template or just collecting personal projects.
 
