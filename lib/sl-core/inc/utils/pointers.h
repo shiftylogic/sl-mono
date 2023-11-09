@@ -25,6 +25,8 @@
 #ifndef __POINTERS_H_AFEDC1E41C814AE98DF188159B6A8D8E__
 #define __POINTERS_H_AFEDC1E41C814AE98DF188159B6A8D8E__
 
+#include <memory>
+
 namespace sl::utils
 {
 

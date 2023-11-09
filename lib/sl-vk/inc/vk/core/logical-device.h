@@ -78,7 +78,7 @@ namespace sl::vk::core
                               const core::physical_device& gpu,
                               const core::device_configurator< configurator_t >& cfg )
     {
-        using device_functions_t = core::loader_base< loader_t >::device_functions_t;
+        using device_functions_t = typename core::loader_base< loader_t >::device_functions_t;
 
         auto exts               = cfg.enabled_extensions();
         auto enabled_features   = cfg.enabled_features();

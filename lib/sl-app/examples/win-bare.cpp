@@ -44,9 +44,9 @@ int main()
         auto wnd  = sl::app::window {
             noop,
              {
-                 .height = 800,
-                 .width  = 1200,
                  .title  = "Window Demo",
+                 .width  = 1200,
+                 .height = 800,
             },
         };
 

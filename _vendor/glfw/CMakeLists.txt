@@ -36,4 +36,7 @@ set( GLFW_BUILD_TEST OFF )
 set( GLFW_BUILD_DOCS OFF )
 set( GLFW_INSTALL OFF )
 
+# Only for Linux
+set( GLFW_USE_WAYLAND ON )
+
 add_subdirectory( "glfw-${SL_GLFW_VERSION}" )

@@ -183,7 +183,7 @@ int main()
 
         logger.info( "Setting up compute environment..." );
         auto device = sl::vk::core::make_logical_device( loader, app_context, gpu, device_config );
-        auto mem    = sl::vk::mem::make_allocator( loader, device, VK_API_VERSION_1_1 );
+        auto mem    = sl::vk::mem::make_allocator( loader, device, app_config.api_version() );
         auto stbuf  = sl::vk::mem::make_storage_buffer( mem, k_image_buffer_size );
 
         auto spv_module

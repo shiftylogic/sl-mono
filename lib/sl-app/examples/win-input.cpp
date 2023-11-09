@@ -37,7 +37,7 @@ int main()
         auto quit   = std::atomic< bool > { false };
         auto inputs = sl::app::input_manager { logger };
         auto wnd
-            = sl::app::window { inputs, { .title = "Window Demo", .height = 600, .width = 800 } };
+            = sl::app::window { inputs, { .title = "Window Demo", .width = 800, .height = 600 } };
 
         // Add some kindings
         inputs.bind( GLFW_KEY_Q,

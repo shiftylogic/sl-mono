@@ -89,7 +89,7 @@ namespace sl::utils
     std::string format_string( const char* format, Args... args )
     {
         auto needed = calculate_string_length( format, args... );
-        auto str    = std::string( needed, 0 );
+        auto str    = std::string( needed + 1, '\0' );
         auto buf    = std::span( &str[0], str.capacity() );
 
         format_string( buf, format, args... );

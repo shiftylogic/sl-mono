@@ -31,6 +31,7 @@
 #if defined( _WIN32 )
 #    include <windows.h>
 #elif defined( __linux__ )
+#    include <linux/limits.h>
 #    include <unistd.h>
 #elif defined( __APPLE__ )
 #    include <mach-o/dyld.h>

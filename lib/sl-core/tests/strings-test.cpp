@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+#include <cstring>
+
 #include <catch2/catch.hpp>
 
 #include <utils/strings.h>
@@ -49,8 +51,8 @@ TEST_CASE( "String formatting (allocating)", "[utils][strings]" )
 
     auto actual = sl::utils::format_string(
         "This string contains a string (%s) and a float (%1.3f).", "a string", 1.123f );
-    REQUIRE( actual.size() == expected.size() );
-    REQUIRE( actual == expected );
+    REQUIRE( strlen( actual.c_str() ) == strlen( expected.c_str() ) );
+    REQUIRE( actual.compare( expected ) );
 }
 
 TEST_CASE( "String replace all matching chars", "[utils][strings]" )

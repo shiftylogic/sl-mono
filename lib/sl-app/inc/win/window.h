@@ -40,8 +40,8 @@ namespace sl::app
         {
             /* Required fields */
             const char* title;
-            int height;
             int width;
+            int height;
 
             /*
              * Optional (with defaults)
