@@ -22,8 +22,11 @@
  * SOFTWARE.
  */
 
+#include <algorithm>
 #include <array>
+#include <random>
 #include <span>
+#include <vector>
 
 #include <io/load.h>
 #include <logging/logger.h>
@@ -36,24 +39,16 @@
 #include <vk/core/logical-device.h>
 #include <vk/mem/allocator.h>
 #include <vk/mem/buffers.h>
-#include <vk/spv/shader.h>
 
-#include <glm/vec4.hpp>
+#include <vk/compute/context.h>
+#include <vk/compute/program.h>
 
 namespace
 {
 
-    using pixel = glm::vec4;
-
-    constexpr auto k_image_width  = 3200;
-    constexpr auto k_image_height = 2400;
-
-    constexpr auto k_image_buffer_size = sizeof( pixel ) * k_image_width * k_image_height;
-
-    const auto k_mandelbrot_spv_file = sl::utils::base_directory() / "assets/mandelbrot.spv";
-
-
-    auto debug_logger = sl::logging::logger {};
+    constexpr auto k_number_count = 16 * 1024 * 1024;
+    const auto k_square_spv_file  = sl::utils::base_directory() / "assets/square.spv";
+    auto debug_logger             = sl::logging::logger {};
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL
     handle_vulkan_debug( VkDebugUtilsMessageSeverityFlagBitsEXT severity,
@@ -149,6 +144,19 @@ namespace
         auto queues() const { return std::make_tuple( -1, 0, 1 ); }
     };
 
+    auto make_input_data( uint32_t count )
+    {
+        auto rd   = std::random_device {};
+        auto rng  = std::mt19937 { rd() };
+        auto dist = std::uniform_int_distribution< uint32_t > {};
+        auto gen  = [&dist, &rng]() { return dist( rng ); };
+
+        auto data = std::vector< uint32_t >( count );
+        std::generate( std::begin( data ), std::end( data ), gen );
+
+        return data;
+    }
+
 }   // namespace
 
 int main()
@@ -182,19 +190,36 @@ int main()
         sl::vk::core::debug::log_diagnostics( logger, device_config );
 
         logger.info( "Setting up compute environment..." );
-        auto device = sl::vk::core::make_logical_device( loader, app_context, gpu, device_config );
-        auto mem    = sl::vk::mem::make_allocator( loader, device, app_config.api_version() );
-        auto stbuf  = sl::vk::mem::make_storage_buffer( mem, k_image_buffer_size );
+        auto device  = sl::vk::core::make_logical_device( loader, app_context, gpu, device_config );
+        auto mem     = sl::vk::mem::make_allocator( loader, device, app_config.api_version() );
+        auto compute = sl::vk::compute::context { device, mem };
 
-        auto spv_module
-            = sl::vk::spv::shader { sl::io::load_file< uint32_t >( k_mandelbrot_spv_file ) };
-        // TODO: Load a shader program
+        logger.info( "Loading compute program..." );
+        auto program
+            = sl::vk::compute::load_program( sl::io::load_file< uint32_t >( k_square_spv_file ) );
+
+        logger.info( "Allocating GPU memory..." );
+        auto in_buf  = sl::vk::mem::make_storage_buffer( mem, k_number_count * sizeof( uint32_t ) );
+        auto out_buf = sl::vk::mem::make_storage_buffer( mem, k_number_count * sizeof( uint32_t ) );
+        auto result_buf
+            = sl::vk::mem::make_readback_buffer( mem, k_number_count * sizeof( uint32_t ) );
+
+        logger.info( "Preparing random data..." );
+        auto in_data = make_input_data( k_number_count );
+
+        logger.info( "Copying data into GPU buffers..." );
+        compute.copy( std::span { in_data }, in_buf );
+
         // TODO: Setup descriptor set pointing to storage buffer
         // TODO: Dispatch GPU compute
         // TODO: Add barrier for compute phase
         // TODO: Add transfer from storage buffer to readback buffer
+
+        compute.copy( out_buf, result_buf );
+        program.execute();
+
         // TODO: Flush & wait
-        // TODO: Write resulting image to disk
+        // TODO: Validate results
 
         logger.info( "Shutting down..." );
     }

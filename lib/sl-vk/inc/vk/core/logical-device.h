@@ -30,10 +30,52 @@
 
 namespace sl::vk::core
 {
+    template< typename device_function_t >
+    struct logical_device;
+}
+
+namespace sl::vk::mem
+{
+
+    template< typename loader_t >
+    auto make_allocator(
+        const core::loader_base< loader_t >&,
+        const core::logical_device< typename core::loader_base< loader_t >::device_functions_t >&,
+        uint32_t );
+
+}   // namespace sl::vk::mem
+
+namespace sl::vk::core
+{
+
+    enum class device_queue
+    {
+        compute  = 0,
+        graphics = 1,
+        transfer = 2,
+    };
 
     template< typename device_functions_t >
     struct logical_device
     {
+        /**
+         * Allocator construction needs access to a bunch of the private data of the logical device.
+         * This is a workaround to not have to expose all that data to everyone.
+         **/
+        template< typename loader_t >
+        friend auto sl::vk::mem::make_allocator(
+            const core::loader_base< loader_t >&,
+            const core::logical_device<
+                typename core::loader_base< loader_t >::device_functions_t >&,
+            uint32_t );
+
+
+        /**
+         * The nasty constructor.
+         *
+         * Prefer to use core::make_logical_device function below.
+         *
+         **/
         explicit logical_device( const core::instance& inst,
                                  const core::physical_device& gpu,
                                  core::device&& device,
@@ -45,6 +87,7 @@ namespace sl::vk::core
             , _gpu { gpu }
             , _device { std::move( device ) }
             , _fns { fns }
+            , _queue_indices { compute_index, graphics_index, transfer_index }
             , _compute { VK_NULL_HANDLE }
             , _graphics { VK_NULL_HANDLE }
             , _transfer { VK_NULL_HANDLE }
@@ -57,16 +100,93 @@ namespace sl::vk::core
                 _fns.vkGetDeviceQueue( _device, transfer_index, 0, &_transfer );
         }
 
-        const core::instance& instance() const noexcept { return _instance; }
-        const core::physical_device& gpu() const noexcept { return _gpu; }
-        const device_functions_t& function_table() const noexcept { return _fns; }
-        operator const core::device&() const noexcept { return _device; }
+
+        /**
+         *
+         * The collection of exported device functions for manipulaing the vulkan device.
+         *
+         **/
+
+        //-----------------------------------
+        // COMMAND BUFFER methods
+
+        inline auto allocate_command_buffer( const core::command_pool& pool ) const
+        {
+            auto info               = core::command_buffer_allocate_info {};
+            info.commandPool        = pool;
+            info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            info.commandBufferCount = 1;
+
+            VkCommandBuffer buffer;
+            vk::error::throw_if_error( "vkAllocateCommandBuffer",
+                                       _fns.vkAllocateCommandBuffers( _device, &info, &buffer ),
+                                       "failed to allocate command buffer from pool" );
+
+            return buffer;
+        }
+
+        inline void begin_command_buffer( VkCommandBuffer buffer ) const
+        {
+            auto info  = core::command_buffer_begin_info {};
+            info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+            vk::error::throw_if_error( "vkBeginCommandBuffer",
+                                       _fns.vkBeginCommandBuffer( buffer, &info ),
+                                       "failed to begin recording command buffer" );
+        }
+
+        inline void command_copy_buffer( VkCommandBuffer cmd_buf,
+                                         uint32_t size_in_bytes,
+                                         VkBuffer source,
+                                         uint32_t source_offset,
+                                         VkBuffer target,
+                                         uint32_t target_offset ) const
+        {
+            VkBufferCopy region {
+                .srcOffset = source_offset,
+                .dstOffset = target_offset,
+                .size      = size_in_bytes,
+            };
+
+            _fns.vkCmdCopyBuffer( cmd_buf, source, target, 1, &region );
+        }
+
+        inline void
+        command_dispatch( VkCommandBuffer buffer, uint32_t x, uint32_t y, uint32_t z ) const
+        {
+            _fns.vkCmdDispatch( buffer, x, y, z );
+        }
+
+        //-----------------------------------
+        // COMMAND POOL methods
+
+        inline auto create_command_pool( device_queue qt ) const
+        {
+            auto info             = core::command_pool_create_info {};
+            info.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+            info.queueFamilyIndex = _queue_indices[static_cast< uint32_t >( qt )];
+
+            VkCommandPool pool;
+            vk::error::throw_if_error( "vkCreateCommandPool",
+                                       _fns.vkCreateCommandPool( _device, &info, nullptr, &pool ),
+                                       "failed to create command pool for specified queue type" );
+
+            return core::command_pool { _device, pool, _fns.vkDestroyCommandPool };
+        }
+
+        inline void reset_command_pool( const core::command_pool& pool ) const
+        {
+            vk::error::throw_if_error( "vkResetCommandPool",
+                                       _fns.vkResetCommandPool( _device, pool, 0 ),
+                                       "failed to reset the command pool" );
+        }
 
     private:
         const core::instance& _instance;
         const core::physical_device& _gpu;
         const core::device _device;
         device_functions_t _fns;
+        std::array< uint32_t, 3 > _queue_indices;
         VkQueue _compute;
         VkQueue _graphics;
         VkQueue _transfer;

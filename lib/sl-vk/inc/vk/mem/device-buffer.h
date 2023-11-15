@@ -68,9 +68,14 @@ namespace sl::vk::mem
 
         operator VkBuffer() const noexcept { return _buffer; }
         auto size() const noexcept { return _size; }
-        auto map_view() const { return device_buffer::view { _allocator, _allocation, _size }; }
 
         bool is_host_visible() const { return _flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT; }
+
+        template< typename data_t >
+        auto map_view() const
+        {
+            return device_buffer::view< data_t > { _allocator, _allocation, _size };
+        }
 
         /**
          * Wrapper 'view' around buffer data (read / write) access.
@@ -106,7 +111,7 @@ namespace sl::vk::mem
                 return count;
             }
 
-            size_t write( std::span< const data_t > data, size_t offset ) noexcept
+            size_t write( const std::span< const data_t > data, size_t offset ) noexcept
             {
                 auto dst   = _data.subspan( offset );
                 auto count = std::min( dst.size(), data.size() );

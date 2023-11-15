@@ -79,6 +79,12 @@ namespace sl::vk::mem
         allocator_ptr_t _allocator;
     };
 
+
+    /**
+     * core::logical_device allows this function to peek inside the logical_device to grab
+     * the appropriate set of functions for the vulkan memory allocations. This just wraps
+     * the details of grabbing that list of functions.
+     **/
     template< typename loader_t >
     auto make_allocator(
         const core::loader_base< loader_t >&,
@@ -86,30 +92,30 @@ namespace sl::vk::mem
             device,
         uint32_t api_version )
     {
-        const auto& device_fns = device.function_table();
+        // auto fns = mem::allocator::get_allocator_function_table< loader_t >( device );
 
         VmaVulkanFunctions fns = {};
 
         // Device-specific functions (note: from device table if change happens).
-        fns.vkAllocateMemory                  = device_fns.vkAllocateMemory;
-        fns.vkBindBufferMemory                = device_fns.vkBindBufferMemory;
-        fns.vkBindBufferMemory2KHR            = device_fns.vkBindBufferMemory2KHR;
-        fns.vkBindImageMemory                 = device_fns.vkBindImageMemory;
-        fns.vkBindImageMemory2KHR             = device_fns.vkBindImageMemory2KHR;
-        fns.vkCmdCopyBuffer                   = device_fns.vkCmdCopyBuffer;
-        fns.vkCreateBuffer                    = device_fns.vkCreateBuffer;
-        fns.vkCreateImage                     = device_fns.vkCreateImage;
-        fns.vkDestroyBuffer                   = device_fns.vkDestroyBuffer;
-        fns.vkDestroyImage                    = device_fns.vkDestroyImage;
-        fns.vkFlushMappedMemoryRanges         = device_fns.vkFlushMappedMemoryRanges;
-        fns.vkFreeMemory                      = device_fns.vkFreeMemory;
-        fns.vkGetBufferMemoryRequirements     = device_fns.vkGetBufferMemoryRequirements;
-        fns.vkGetBufferMemoryRequirements2KHR = device_fns.vkGetBufferMemoryRequirements2KHR;
-        fns.vkGetImageMemoryRequirements      = device_fns.vkGetImageMemoryRequirements;
-        fns.vkGetImageMemoryRequirements2KHR  = device_fns.vkGetImageMemoryRequirements2KHR;
-        fns.vkInvalidateMappedMemoryRanges    = device_fns.vkInvalidateMappedMemoryRanges;
-        fns.vkMapMemory                       = device_fns.vkMapMemory;
-        fns.vkUnmapMemory                     = device_fns.vkUnmapMemory;
+        fns.vkAllocateMemory                  = device._fns.vkAllocateMemory;
+        fns.vkBindBufferMemory                = device._fns.vkBindBufferMemory;
+        fns.vkBindBufferMemory2KHR            = device._fns.vkBindBufferMemory2KHR;
+        fns.vkBindImageMemory                 = device._fns.vkBindImageMemory;
+        fns.vkBindImageMemory2KHR             = device._fns.vkBindImageMemory2KHR;
+        fns.vkCmdCopyBuffer                   = device._fns.vkCmdCopyBuffer;
+        fns.vkCreateBuffer                    = device._fns.vkCreateBuffer;
+        fns.vkCreateImage                     = device._fns.vkCreateImage;
+        fns.vkDestroyBuffer                   = device._fns.vkDestroyBuffer;
+        fns.vkDestroyImage                    = device._fns.vkDestroyImage;
+        fns.vkFlushMappedMemoryRanges         = device._fns.vkFlushMappedMemoryRanges;
+        fns.vkFreeMemory                      = device._fns.vkFreeMemory;
+        fns.vkGetBufferMemoryRequirements     = device._fns.vkGetBufferMemoryRequirements;
+        fns.vkGetBufferMemoryRequirements2KHR = device._fns.vkGetBufferMemoryRequirements2KHR;
+        fns.vkGetImageMemoryRequirements      = device._fns.vkGetImageMemoryRequirements;
+        fns.vkGetImageMemoryRequirements2KHR  = device._fns.vkGetImageMemoryRequirements2KHR;
+        fns.vkInvalidateMappedMemoryRanges    = device._fns.vkInvalidateMappedMemoryRanges;
+        fns.vkMapMemory                       = device._fns.vkMapMemory;
+        fns.vkUnmapMemory                     = device._fns.vkUnmapMemory;
 
         // Global functions
         fns.vkGetPhysicalDeviceMemoryProperties     = ::vkGetPhysicalDeviceMemoryProperties;
@@ -118,9 +124,9 @@ namespace sl::vk::mem
 
         VmaAllocatorCreateInfo info = {};
         info.vulkanApiVersion       = api_version;
-        info.instance               = device.instance();
-        info.physicalDevice         = device.gpu();
-        info.device                 = static_cast< const core::device& >( device );
+        info.instance               = device._instance;
+        info.physicalDevice         = device._gpu;
+        info.device                 = device._device;
         info.pVulkanFunctions       = &fns;
 
         VmaAllocator vma_alloc;

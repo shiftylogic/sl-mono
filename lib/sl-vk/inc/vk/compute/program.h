@@ -22,40 +22,35 @@
  * SOFTWARE.
  */
 
-#ifndef __RESOURCES_H_CC5ED38782CC4B9EA4687D297C621B67__
-#define __RESOURCES_H_CC5ED38782CC4B9EA4687D297C621B67__
+#ifndef __PROGRAM_H_C74161AFB993442ABDA3F4025844D8CD__
+#define __PROGRAM_H_C74161AFB993442ABDA3F4025844D8CD__
 
-#include <vulkan.h>
+#include <vk/compute/context.h>
+#include <vk/spv/shader.h>
 
-#include "./device-resource.h"
-
-namespace sl::vk::core
+namespace sl::vk::compute
 {
 
-    /*
-     * Core Vulkan Resources
-     */
+    template< size_t max_desc_set_layouts = 4 >
+    struct program
+    {
+        explicit program() {}
 
-    using device   = vk::core::resource< VkDevice, const VkAllocationCallbacks >;
-    using instance = vk::core::resource< VkInstance, const VkAllocationCallbacks >;
+        void execute() const {}
 
+    private:
+        // core::shader_module _shader;
+        // core::pipeline _pipeline;
+        // core::pipeline_layout _pipeline_layout;
+        // std::array< VkDescriptorSetLayout > _layouts;
+    };
 
-    /*
-     * Instance-specific Vulkan Resources
-     */
+    auto load_program( std::vector< uint32_t >&& code )
+    {
+        auto spv_module = sl::vk::spv::shader { code };
+        return program {};
+    }
 
-    using debug_utils_messenger = vk::core::
-        device_resource< VkDebugUtilsMessengerEXT, VkInstance, const VkAllocationCallbacks >;
+}   // namespace sl::vk::compute
 
-    /*
-     * Device-specific Vulkan Resources
-     */
-
-    using shader_module
-        = vk::core::device_resource< VkShaderModule, VkDevice, const VkAllocationCallbacks >;
-    using command_pool
-        = vk::core::device_resource< VkCommandPool, VkDevice, const VkAllocationCallbacks >;
-
-}   // namespace sl::vk::core
-
-#endif /* __RESOURCES_H_CC5ED38782CC4B9EA4687D297C621B67__ */
+#endif /* __PROGRAM_H_C74161AFB993442ABDA3F4025844D8CD__ */

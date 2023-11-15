@@ -330,13 +330,23 @@ case core::device_feature::e:                                                   
             logger.trace( "      -> [Count: %d] %s", q.queueCount, flags.c_str() );
         }
 
-        auto mem = device.memory_properties();
-        logger.trace( "    > Memory Types (%d):", mem.memoryTypeCount );
-        for ( uint32_t i = 0; i < mem.memoryTypeCount; ++i )
         {
-            const auto& mt = mem.memoryTypes[i];
-            auto flags     = priv::memory_type_flags_string( mt.propertyFlags );
-            logger.trace( "      -> [Heap Index: %d] %s", mt.heapIndex, flags.c_str() );
+            auto mem = device.memory_properties();
+
+            logger.trace( "    > Memory Heaps (%d):", mem.memoryHeapCount );
+            for ( uint32_t i = 0; i < mem.memoryHeapCount; ++i )
+            {
+                const auto& heap = mem.memoryHeaps[i];
+                logger.trace( "      -> [%d] %lu GB", i, heap.size / 1024 / 1024 / 1024 );
+            }
+
+            logger.trace( "    > Memory Types (%d):", mem.memoryTypeCount );
+            for ( uint32_t i = 0; i < mem.memoryTypeCount; ++i )
+            {
+                const auto& mt = mem.memoryTypes[i];
+                auto flags     = priv::memory_type_flags_string( mt.propertyFlags );
+                logger.trace( "      -> [Heap: %d] %s", mt.heapIndex, flags.c_str() );
+            }
         }
 
         const auto& limits = device.limits();
@@ -359,10 +369,10 @@ case core::device_feature::e:                                                   
                       limits.maxDescriptorSetUniformBuffers );
         logger.trace( "      -> Maximum Per Stage Resources:               %lu",
                       limits.maxPerStageResources );
-        logger.trace( "      -> Maximum Framebuffer Height:                %lu",
-                      limits.maxFramebufferHeight );
         logger.trace( "      -> Maximum Framebuffer Width:                 %lu",
                       limits.maxFramebufferWidth );
+        logger.trace( "      -> Maximum Framebuffer Height:                %lu",
+                      limits.maxFramebufferHeight );
         logger.trace( "      -> Maximum Memory Allocations:                %lu",
                       limits.maxMemoryAllocationCount );
         logger.trace( "      -> Maximum Push Constant Bytes:               %lu",
@@ -377,6 +387,22 @@ case core::device_feature::e:                                                   
                       limits.minStorageBufferOffsetAlignment );
         logger.trace( "      -> Uniform Buffer Alignment:                  %lu",
                       limits.minUniformBufferOffsetAlignment );
+        logger.trace( "      -> Maximum Draw Indirect Count:               %lu",
+                      limits.maxDrawIndirectCount );
+        logger.trace( "      -> Maximum Compute Shared Memory:             %lu",
+                      limits.maxComputeSharedMemorySize );
+        logger.trace( "      -> Maximum Compute Work Group Count:          %lu",
+                      limits.maxComputeWorkGroupCount );
+        logger.trace( "      -> Maximum Compute Work Group Size:           %lu",
+                      limits.maxComputeWorkGroupSize );
+        logger.trace( "      -> Maximum Compute Work Groups Invocations:   %lu",
+                      limits.maxComputeWorkGroupInvocations );
+        logger.trace( "      -> Maximum Viewports:                         %lu",
+                      limits.maxViewports );
+        logger.trace( "      -> Maximum Viewport Width:                    %lu",
+                      limits.maxViewportDimensions[0] );
+        logger.trace( "      -> Maximum Viewport Height:                   %lu",
+                      limits.maxViewportDimensions[1] );
 
         logger.trace( "   > Device Features:" );
         priv::dump_features( logger, device, "     -> " );
