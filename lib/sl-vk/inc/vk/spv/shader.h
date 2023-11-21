@@ -26,18 +26,128 @@
 #define __SHADER_H_5D51EAEC6017404DB29EC6C44009CA1B__
 
 #include <algorithm>
+#include <memory>
 #include <span>
+#include <string>
 #include <vector>
 
 #include <vulkan.h>
 
 #include <spirv/spirv_reflect.h>
+#include <utils/deferred.h>
 
 #include "error.h"
 #include "helpers.h"
 
 namespace sl::vk::spv
 {
+
+    struct descriptor_binding_info
+    {
+        uint32_t index;
+        VkDescriptorType type;
+        uint32_t count;
+    };
+
+    struct descriptor_set_info
+    {
+        uint32_t index;
+        std::vector< descriptor_binding_info > bindings;
+    };
+
+    struct push_constant_block_info
+    {
+        uint32_t offset;
+        uint32_t size;
+    };
+
+    struct vertex_input_info
+    {
+        uint32_t location;
+        VkFormat format;
+    };
+
+
+    namespace priv
+    {
+
+        auto collect_vertex_inputs( const SpvReflectShaderModule& spv_mod )
+        {
+            // If this is NOT a vertex shader, vertex inputs don't matter.
+            if ( spv_mod.shader_stage != SPV_REFLECT_SHADER_STAGE_VERTEX_BIT )
+                return std::vector< vertex_input_info > {};
+
+            const auto v_count  = spv_mod.input_variable_count;
+            const auto* v_items = spv_mod.input_variables;
+
+            std::vector< vertex_input_info > vars;
+            vars.reserve( v_count );
+
+            for ( uint32_t i = 0; i < v_count; ++i )
+            {
+                const auto* item = v_items[i];
+
+                if ( item->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN )
+                    continue;
+
+                vars.push_back( vertex_input_info {
+                    .location = item->location,
+                    .format   = static_cast< VkFormat >( item->format ),
+                } );
+            }
+
+            vars.shrink_to_fit();
+            return vars;
+        }
+
+        auto collect_descriptor_sets( const SpvReflectShaderModule& spv_mod )
+        {
+            const auto s_count  = spv_mod.descriptor_set_count;
+            const auto* s_items = spv_mod.descriptor_sets;
+
+            std::vector< descriptor_set_info > sets( s_count );
+            for ( uint32_t i = 0; i < s_count; ++i )
+            {
+                const auto& item = s_items[i];
+                auto& set        = sets.at( i );
+
+                set.index = item.set;
+                set.bindings.resize( item.binding_count );
+
+                for ( uint32_t j = 0; j < item.binding_count; ++j )
+                {
+                    const auto* binding = item.bindings[j];
+                    auto& b             = set.bindings.at( j );
+
+                    b.index = binding->binding;
+                    b.type  = static_cast< VkDescriptorType >( binding->descriptor_type );
+                    b.count = binding->count;
+                }
+            }
+
+            return sets;
+        }
+
+        auto collect_push_constant_blocks( const SpvReflectShaderModule& spv_mod )
+        {
+            const auto pc_count   = spv_mod.push_constant_block_count;
+            const auto* pc_blocks = spv_mod.push_constant_blocks;
+
+            std::vector< push_constant_block_info > pcbs( pc_count );
+            for ( uint32_t i = 0; i < pc_count; ++i )
+            {
+                const auto* block = &pc_blocks[i];
+                auto& pcb         = pcbs.at( i );
+
+                pcb.offset = block->offset;
+                pcb.size   = block->size;
+            }
+
+            return pcbs;
+        }
+
+    }   // namespace priv
+
 
     enum class shader_stage : VkShaderStageFlags
     {
@@ -47,190 +157,59 @@ namespace sl::vk::spv
         vertex   = VK_SHADER_STAGE_VERTEX_BIT,
     };
 
-    struct set_layout_data
-    {
-        uint32_t set;
-        std::vector< VkDescriptorSetLayoutBinding > bindings;
-    };
-
     struct shader
     {
-        // No copy / move
-        shader( const shader& )            = delete;
-        shader& operator=( const shader& ) = delete;
-        shader( shader&& )                 = default;
-        shader& operator=( shader&& )      = default;
-
-
-        /**
-         * Can be constructed with a vector (transfers ownership / moves)
-         *   or
-         * Initialized with any 'span' type, but creates a new vector (allocation).
-         **/
-
-        explicit shader( std::vector< uint32_t >&& code )
-            : _code( std::move( code ) )
-        {
-            spv::error::throw_if_error(
-                "spvReflectCreateShaderModule2",
-                ::spvReflectCreateShaderModule2( SPV_REFLECT_MODULE_FLAG_NO_COPY,
-                                                 _code.size() * sizeof( uint32_t ),
-                                                 _code.data(),
-                                                 &_spv ),
-                "failed to create SPV shader module" );
-        }
-
-        explicit shader( const std::span< uint32_t > code )
-            : shader { std::vector( std::begin( code ), std::end( code ) ) }
+        explicit shader( const char* entry,
+                         shader_stage stage,
+                         std::vector< descriptor_set_info >&& descriptor_sets,
+                         std::vector< push_constant_block_info >&& push_constant_blocks,
+                         std::vector< vertex_input_info >&& vertex_inputs )
+            : _entry { entry }
+            , _stage { stage }
+            , _descriptor_sets { std::move( descriptor_sets ) }
+            , _push_constant_blocks { std::move( push_constant_blocks ) }
+            , _vertex_inputs { std::move( vertex_inputs ) }
         {}
 
-        ~shader() { ::spvReflectDestroyShaderModule( &_spv ); }
+        const char* entry() const { return _entry.c_str(); }
+        shader_stage stage() const { return _stage; }
 
-
-        /**
-         * Reflected shader module accessors
-         **/
-
-        const char* entry() const { return _spv.entry_point_name; }
-        shader_stage stage() const { return static_cast< shader_stage >( _spv.shader_stage ); }
-
-        auto vertex_inputs( VkVertexInputBindingDescription& binding ) const
-        {
-            if ( _spv.shader_stage != SPV_REFLECT_SHADER_STAGE_VERTEX_BIT )
-                throw std::runtime_error { "vertex inputs only valid for vertex shaders" };
-
-            ///////////////////////////////////////////////////////
-            // Fetch input variables from shader code
-            uint32_t count;
-            spv::error::throw_if_error(
-                "spvReflectEnumerateInputVariables",
-                ::spvReflectEnumerateInputVariables( &_spv, &count, nullptr ),
-                "failed to enumerate input variables (count)" );
-
-            std::vector< SpvReflectInterfaceVariable* > inputs( count );
-            spv::error::throw_if_error(
-                "spvReflectEnumerateInputVariables",
-                ::spvReflectEnumerateInputVariables( &_spv, &count, inputs.data() ),
-                "failed to enumerate input variables" );
-
-            ///////////////////////////////////////////////////////
-            // Build initial vertex input attribute descriptions
-            std::vector< VkVertexInputAttributeDescription > attrs( inputs.size() );
-            std::for_each( std::begin( inputs ), std::end( inputs ), [&]( const auto* input ) {
-                if ( input->decoration_flags & SPV_REFLECT_DECORATION_BUILT_IN )
-                    return;
-
-                attrs.push_back( {
-                    .location = input->location,
-                    .binding  = binding.binding,
-                    .format   = static_cast< VkFormat >( input->format ),
-                    .offset   = 0,   // To be fixed up below
-                } );
-            } );
-
-            ///////////////////////////////////////////////////////
-            // Sort attributes by location
-            std::sort( std::begin( attrs ), std::end( attrs ), []( const auto& x, const auto& y ) {
-                return x.location < y.location;
-            } );
-
-            ///////////////////////////////////////////////////////
-            // Fix up attribute offset and compute binding stride
-            uint32_t stride = 0;
-            std::for_each( std::begin( attrs ), std::end( attrs ), [&stride]( auto& attr ) {
-                attr.offset = stride;
-                stride += spv::format_size( attr.format );
-            } );
-
-            // Patch the binding stride with the correct computed value
-            binding.stride = stride;
-
-            return attrs;
-        }
-
-        auto set_layouts() const
-        {
-            ///////////////////////////////////////////////////////
-            // Fetch descriptor sets from shader code
-            uint32_t count;
-            spv::error::throw_if_error(
-                "spvReflectEnumerateDescriptorSets",
-                ::spvReflectEnumerateDescriptorSets( &_spv, &count, nullptr ),
-                "failed to enumerate descriptor sets (count)" );
-
-            std::vector< SpvReflectDescriptorSet* > sets( count );
-            spv::error::throw_if_error(
-                "spvReflectEnumerateDescriptorSets",
-                ::spvReflectEnumerateDescriptorSets( &_spv, &count, sets.data() ),
-                "failed to enumerate descriptor sets" );
-
-            ///////////////////////////////////////////////////////
-            // Build descriptor set layout structures
-            std::vector< set_layout_data > layouts( sets.size() );
-            auto stage            = static_cast< VkShaderStageFlagBits >( _spv.shader_stage );
-            auto process_bindings = [stage]( const auto* binding ) {
-                auto slb = VkDescriptorSetLayoutBinding {
-                    .binding         = binding->binding,
-                    .descriptorType  = static_cast< VkDescriptorType >( binding->descriptor_type ),
-                    .descriptorCount = 1,
-                    .stageFlags      = stage,
-                };
-
-                auto dims = std::span( binding->array.dims, binding->array.dims_count );
-                std::for_each( std::begin( dims ), std::end( dims ), [&slb]( const auto& dim ) {
-                    slb.descriptorCount *= dim;
-                } );
-
-                return slb;
-            };
-            auto process_set = [&, n = 0]( const auto* set ) mutable {
-                auto bindings = std::span( set->bindings, set->binding_count );
-                auto& layout  = layouts.at( n++ );
-                layout.set    = set->set;
-
-                layout.bindings.reserve( set->binding_count );
-                std::transform( std::begin( bindings ),
-                                std::end( bindings ),
-                                std::back_inserter( layout.bindings ),
-                                process_bindings );
-            };
-            std::for_each( std::begin( sets ), std::end( sets ), process_set );
-
-            return layouts;
-        }
-
-        auto push_constants() const
-        {
-            uint32_t count;
-            spv::error::throw_if_error(
-                "spvReflectEnumeratePushConstantBlocks",
-                ::spvReflectEnumeratePushConstantBlocks( &_spv, &count, nullptr ),
-                "failed to enumerate push constant blocks (count)" );
-
-            std::vector< SpvReflectBlockVariable* > blocks( count );
-            spv::error::throw_if_error(
-                "spvReflectEnumeratePushConstantBlocks",
-                ::spvReflectEnumeratePushConstantBlocks( &_spv, &count, blocks.data() ),
-                "failed to enumerate push constant blocks" );
-
-            ///////////////////////////////////////////////////////
-            // Build push constant range structures
-            std::vector< VkPushConstantRange > pcs( blocks.size() );
-            std::for_each(
-                std::begin( blocks ), std::end( blocks ), [&, n = 0]( const auto* block ) mutable {
-                    auto& pc      = pcs.at( n++ );
-                    pc.stageFlags = _spv.shader_stage;
-                    pc.offset     = block->offset;
-                    pc.size       = block->size;
-                } );
-
-            return pcs;
-        }
+        auto descriptor_sets() const { return std::span( _descriptor_sets ); }
+        auto push_constant_blocks() const { return std::span( _push_constant_blocks ); }
+        auto vertex_inputs() const { return std::span( _vertex_inputs ); }
 
     private:
-        std::vector< uint32_t > _code;
-        SpvReflectShaderModule _spv {};
+        std::string _entry;
+        shader_stage _stage;
+
+        std::vector< descriptor_set_info > _descriptor_sets;
+        std::vector< push_constant_block_info > _push_constant_blocks;
+        std::vector< vertex_input_info > _vertex_inputs;
     };
+
+
+    auto make_shader( const std::span< const uint32_t > code )
+    {
+        SpvReflectShaderModule spv_raw {};
+        spv::error::throw_if_error(
+            "spvReflectCreateShaderModule2",
+            ::spvReflectCreateShaderModule2( SPV_REFLECT_MODULE_FLAG_NO_COPY,
+                                             code.size() * sizeof( uint32_t ),
+                                             code.data(),
+                                             &spv_raw ),
+            "failed to create SPV shader module" );
+
+        // Clean everything up when exiting this block
+        sl::utils::deferred _ { [&spv_raw]() { ::spvReflectDestroyShaderModule( &spv_raw ); } };
+
+        return spv::shader {
+            spv_raw.entry_point_name,
+            static_cast< shader_stage >( spv_raw.shader_stage ),
+            priv::collect_descriptor_sets( spv_raw ),
+            priv::collect_push_constant_blocks( spv_raw ),
+            priv::collect_vertex_inputs( spv_raw ),
+        };
+    }
 
 }   // namespace sl::vk::spv
 

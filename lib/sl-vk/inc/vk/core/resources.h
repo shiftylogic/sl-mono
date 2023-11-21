@@ -51,10 +51,15 @@ namespace sl::vk::core
      * Device-specific Vulkan Resources
      */
 
-    using shader_module
-        = vk::core::device_resource< VkShaderModule, VkDevice, const VkAllocationCallbacks >;
     using command_pool
         = vk::core::device_resource< VkCommandPool, VkDevice, const VkAllocationCallbacks >;
+    using descriptor_set_layout
+        = vk::core::device_resource< VkDescriptorSetLayout, VkDevice, const VkAllocationCallbacks >;
+    using pipeline = vk::core::device_resource< VkPipeline, VkDevice, const VkAllocationCallbacks >;
+    using pipeline_layout
+        = vk::core::device_resource< VkPipelineLayout, VkDevice, const VkAllocationCallbacks >;
+    using shader_module
+        = vk::core::device_resource< VkShaderModule, VkDevice, const VkAllocationCallbacks >;
 
 }   // namespace sl::vk::core
 

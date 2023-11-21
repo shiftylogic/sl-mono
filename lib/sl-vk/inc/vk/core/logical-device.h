@@ -107,8 +107,8 @@ namespace sl::vk::core
          *
          **/
 
-        //-----------------------------------
-        // COMMAND BUFFER methods
+        //---------------------
+        // COMMAND BUFFER
 
         inline auto allocate_command_buffer( const core::command_pool& pool ) const
         {
@@ -157,8 +157,8 @@ namespace sl::vk::core
             _fns.vkCmdDispatch( buffer, x, y, z );
         }
 
-        //-----------------------------------
-        // COMMAND POOL methods
+        //---------------------
+        // COMMAND POOL
 
         inline auto create_command_pool( device_queue qt ) const
         {
@@ -180,6 +180,89 @@ namespace sl::vk::core
                                        _fns.vkResetCommandPool( _device, pool, 0 ),
                                        "failed to reset the command pool" );
         }
+
+        //---------------------
+        // DESCRIPTOR SETS
+
+        inline auto create_descriptor_set_layout(
+            const std::span< const VkDescriptorSetLayoutBinding > bindings ) const
+        {
+            auto info         = core::descriptor_set_layout_create_info {};
+            info.bindingCount = bindings.size();
+            info.pBindings    = bindings.data();
+
+            VkDescriptorSetLayout layout;
+            vk::error::throw_if_error(
+                "vkCreateDescriptorSetLayout",
+                _fns.vkCreateDescriptorSetLayout( _device, &info, nullptr, &layout ),
+                "failed to create descriptor set layout" );
+
+            return core::descriptor_set_layout {
+                _device, layout, _fns.vkDestroyDescriptorSetLayout };
+        }
+
+        //---------------------
+        // PIPELINES
+
+        inline auto
+        create_pipeline_layout( const std::span< const VkDescriptorSetLayout > set_layouts,
+                                const std::span< const VkPushConstantRange > push_constants ) const
+        {
+            auto info                   = core::pipeline_layout_create_info {};
+            info.pushConstantRangeCount = push_constants.size();
+            info.pPushConstantRanges    = push_constants.data();
+            info.setLayoutCount         = set_layouts.size();
+            info.pSetLayouts            = set_layouts.data();
+
+            VkPipelineLayout layout;
+            vk::error::throw_if_error(
+                "vkCreatePiplineLayout",
+                _fns.vkCreatePipelineLayout( _device, &info, nullptr, &layout ),
+                "failed to create pipeline layout" );
+
+            return core::pipeline_layout { _device, layout, _fns.vkDestroyPipelineLayout };
+        }
+
+        inline auto create_compute_pipeline( const core::pipeline_layout& layout,
+                                             const core::shader_module& shader,
+                                             const char* entry_name ) const
+        {
+            auto stage_info   = core::pipeline_shader_stage_create_info {};
+            stage_info.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
+            stage_info.module = shader;
+            stage_info.pName  = entry_name;
+
+            auto info   = core::compute_pipeline_create_info {};
+            info.layout = layout;
+            info.stage  = stage_info;
+
+            VkPipeline pipeline;
+            vk::error::throw_if_error( "vkCreateComputePipelines",
+                                       _fns.vkCreateComputePipelines(
+                                           _device, VK_NULL_HANDLE, 1, &info, nullptr, &pipeline ),
+                                       "failed to create compute pipeline" );
+
+            return core::pipeline { _device, pipeline, _fns.vkDestroyPipeline };
+        }
+
+        //---------------------
+        // SHADERS
+
+        inline auto create_shader( const std::span< const uint32_t > code ) const
+        {
+            auto info     = core::shader_module_create_info {};
+            info.codeSize = code.size() * sizeof( uint32_t );
+            info.pCode    = code.data();
+
+            VkShaderModule shader;
+            vk::error::throw_if_error(
+                "vkCreateShaderModule",
+                _fns.vkCreateShaderModule( _device, &info, nullptr, &shader ),
+                "failed to create shader module from code segment" );
+
+            return core::shader_module { _device, shader, _fns.vkDestroyShaderModule };
+        }
+
 
     private:
         const core::instance& _instance;

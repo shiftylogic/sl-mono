@@ -391,17 +391,20 @@ case core::device_feature::e:                                                   
                       limits.maxDrawIndirectCount );
         logger.trace( "      -> Maximum Compute Shared Memory:             %lu",
                       limits.maxComputeSharedMemorySize );
-        logger.trace( "      -> Maximum Compute Work Group Count:          %lu",
-                      limits.maxComputeWorkGroupCount );
-        logger.trace( "      -> Maximum Compute Work Group Size:           %lu",
-                      limits.maxComputeWorkGroupSize );
+        logger.trace( "      -> Maximum Compute Work Group Count:          (%u, %u, %u)",
+                      limits.maxComputeWorkGroupCount[0],
+                      limits.maxComputeWorkGroupCount[1],
+                      limits.maxComputeWorkGroupCount[2] );
+        logger.trace( "      -> Maximum Compute Work Group Size:           (%u, %u, %u)",
+                      limits.maxComputeWorkGroupSize[0],
+                      limits.maxComputeWorkGroupSize[1],
+                      limits.maxComputeWorkGroupSize[2] );
         logger.trace( "      -> Maximum Compute Work Groups Invocations:   %lu",
                       limits.maxComputeWorkGroupInvocations );
         logger.trace( "      -> Maximum Viewports:                         %lu",
                       limits.maxViewports );
-        logger.trace( "      -> Maximum Viewport Width:                    %lu",
-                      limits.maxViewportDimensions[0] );
-        logger.trace( "      -> Maximum Viewport Height:                   %lu",
+        logger.trace( "      -> Maximum Viewport:                          (%u, %u)",
+                      limits.maxViewportDimensions[0],
                       limits.maxViewportDimensions[1] );
 
         logger.trace( "   > Device Features:" );

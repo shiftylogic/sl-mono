@@ -25,6 +25,9 @@
 #ifndef __CONTEXT_H_EC2721296A87430CAAE6401FAB73FAC3__
 #define __CONTEXT_H_EC2721296A87430CAAE6401FAB73FAC3__
 
+#include <vk/core/logical-device.h>
+#include <vk/mem/allocator.h>
+
 namespace sl::vk::compute
 {
 

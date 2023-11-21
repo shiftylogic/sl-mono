@@ -195,8 +195,8 @@ int main()
         auto compute = sl::vk::compute::context { device, mem };
 
         logger.info( "Loading compute program..." );
-        auto program
-            = sl::vk::compute::load_program( sl::io::load_file< uint32_t >( k_square_spv_file ) );
+        auto program = sl::vk::compute::make_program(
+            device, sl::io::load_file< uint32_t >( k_square_spv_file ) );
 
         logger.info( "Allocating GPU memory..." );
         auto in_buf  = sl::vk::mem::make_storage_buffer( mem, k_number_count * sizeof( uint32_t ) );
