@@ -33,6 +33,7 @@ namespace sl::vk::mem
     auto make_index_buffer( const mem::allocator& alloc, VkDeviceSize size )
     {
         return alloc.create_buffer( size,
+                                    mem::buffer_type::index,
                                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT
                                         | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                     VMA_MEMORY_USAGE_AUTO );
@@ -41,6 +42,7 @@ namespace sl::vk::mem
     auto make_readback_buffer( const mem::allocator& alloc, VkDeviceSize size )
     {
         return alloc.create_buffer( size,
+                                    mem::buffer_type::storage,
                                     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                     VMA_MEMORY_USAGE_AUTO,
                                     VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT );
@@ -49,6 +51,7 @@ namespace sl::vk::mem
     auto make_staging_buffer( const mem::allocator& alloc, VkDeviceSize size )
     {
         return alloc.create_buffer( size,
+                                    mem::buffer_type::storage,
                                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                     VMA_MEMORY_USAGE_AUTO,
                                     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT );
@@ -57,6 +60,7 @@ namespace sl::vk::mem
     auto make_storage_buffer( const mem::allocator& alloc, VkDeviceSize size )
     {
         return alloc.create_buffer( size,
+                                    mem::buffer_type::storage,
                                     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                                         | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                                         | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -67,6 +71,7 @@ namespace sl::vk::mem
     {
         return alloc.create_buffer(
             size,
+            mem::buffer_type::uniform,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
@@ -76,6 +81,7 @@ namespace sl::vk::mem
     auto make_vertex_buffer( const mem::allocator& alloc, VkDeviceSize size )
     {
         return alloc.create_buffer( size,
+                                    mem::buffer_type::vertex,
                                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
                                         | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                     VMA_MEMORY_USAGE_AUTO );

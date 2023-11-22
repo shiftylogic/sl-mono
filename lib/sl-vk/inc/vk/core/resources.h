@@ -53,8 +53,11 @@ namespace sl::vk::core
 
     using command_pool
         = vk::core::device_resource< VkCommandPool, VkDevice, const VkAllocationCallbacks >;
+    using descriptor_pool
+        = vk::core::device_resource< VkDescriptorPool, VkDevice, const VkAllocationCallbacks >;
     using descriptor_set_layout
         = vk::core::device_resource< VkDescriptorSetLayout, VkDevice, const VkAllocationCallbacks >;
+    using fence    = vk::core::device_resource< VkFence, VkDevice, const VkAllocationCallbacks >;
     using pipeline = vk::core::device_resource< VkPipeline, VkDevice, const VkAllocationCallbacks >;
     using pipeline_layout
         = vk::core::device_resource< VkPipelineLayout, VkDevice, const VkAllocationCallbacks >;

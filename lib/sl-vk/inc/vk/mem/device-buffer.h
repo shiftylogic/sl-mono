@@ -33,16 +33,26 @@
 namespace sl::vk::mem
 {
 
+    enum class buffer_type
+    {
+        index,
+        storage,
+        vertex,
+        uniform,
+    };
+
     struct device_buffer
     {
         device_buffer( VmaAllocator allocator,
                        VkDeviceSize size,
+                       buffer_type type,
                        VkBufferUsageFlags usage_bits,
                        VmaMemoryUsage memory_usage,
                        VmaAllocationCreateFlags memory_flags )
             : _allocator { allocator }
             , _allocation { VK_NULL_HANDLE }
             , _size { size }
+            , _type { type }
         {
             auto info        = core::buffer_create_info {};
             info.size        = size;
@@ -68,6 +78,7 @@ namespace sl::vk::mem
 
         operator VkBuffer() const noexcept { return _buffer; }
         auto size() const noexcept { return _size; }
+        auto type() const noexcept { return _type; }
 
         bool is_host_visible() const { return _flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT; }
 
@@ -98,10 +109,12 @@ namespace sl::vk::mem
                 vk::error::throw_if_error( "vmaMapMemory",
                                            ::vmaMapMemory( alloc, allocation, &data ),
                                            "failed to map device memory to host" );
-                _data = std::span( static_cast< data_t* >( data ), size );
+                _data = std::span( static_cast< data_t* >( data ), size / sizeof( data_t ) );
             }
 
             ~view() noexcept { ::vmaUnmapMemory( _allocator, _allocation ); }
+
+            auto data() const { return _data; }
 
             size_t read( std::span< data_t > data, size_t offset ) noexcept
             {
@@ -130,6 +143,7 @@ namespace sl::vk::mem
         VmaAllocation _allocation;
         VkMemoryPropertyFlags _flags;
         VkDeviceSize _size;
+        buffer_type _type;
         mem::buffer _buffer;
     };
 

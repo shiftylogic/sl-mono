@@ -77,23 +77,97 @@ namespace sl::vk::compute
                 view.write( data, offset );
             };
 
-            if ( target.is_host_visible() )
-            {
-                map_and_copy( target, target_offset );
-            }
-            else
-            {
-                auto staging
-                    = mem::make_staging_buffer( _allocator, data.size() * sizeof( data_t ) );
-                map_and_copy( staging, 0 );
-                copy( staging, target );
-            }
+            vk::error::throw_if(
+                !target.is_host_visible(),
+                "compute-context-copy-buffer",
+                VK_ERROR_UNKNOWN,
+                "cannot copy a buffer to GPU unless it is host visible (use a staging buffer)." );
+
+            map_and_copy( target, target_offset );
         }
 
 
         /**
-         *
+         * Descriptor sets
          **/
+
+        template< typename descriptor_cache_t >
+        auto allocate( descriptor_cache_t& cache,
+                       const core::descriptor_set_layout& set_layout ) const
+        {
+            return cache.allocate( _device, set_layout );
+        }
+
+        void bind( const core::pipeline_layout& layout,
+                   const std::span< const VkDescriptorSet > desc_sets ) const
+        {
+            _device.command_bind_descriptor_sets(
+                _buffer, layout, desc_sets, VK_PIPELINE_BIND_POINT_COMPUTE );
+        }
+
+        void update( VkDescriptorSet desc_set,
+                     uint32_t binding,
+                     const mem::device_buffer& buffer,
+                     VkDeviceSize offset = 0,
+                     VkDeviceSize range  = VK_WHOLE_SIZE ) const
+        {
+            VkDescriptorType dtype;
+            switch ( buffer.type() )
+            {
+            case mem::buffer_type::storage:
+                dtype = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                break;
+            case mem::buffer_type::uniform:
+                dtype = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                break;
+            default:
+                throw vk::error { "compute-context-update",
+                                  VK_ERROR_UNKNOWN,
+                                  "invalid buffer type for descriptor set update" };
+            }
+
+            _device.update_descriptor_set( desc_set, binding, buffer, offset, range, dtype );
+        }
+
+
+        /**
+         * Pipeline binding
+         **/
+
+        void bind( const core::pipeline& pipeline ) const
+        {
+            _device.command_bind_pipeline( _buffer, pipeline, VK_PIPELINE_BIND_POINT_COMPUTE );
+        }
+
+
+        /**
+         * Execution dispatch
+         **/
+
+        void dispatch( uint32_t x, uint32_t y, uint32_t z ) const
+        {
+            _device.command_dispatch( _buffer, x, y, z );
+        }
+
+        void flush_and_wait()
+        {
+            _device.end_command_buffer( _buffer );
+
+            // Submit all the work and wait for it to complete
+            {
+                auto fence           = _device.create_fence( false );
+                VkFence fence_handle = fence;
+
+                _device.queue_submit( core::device_queue::compute, _buffer, fence );
+                _device.wait_for_fences( std::span { &fence_handle, 1 } );
+            }
+
+            // Reset command pool and start a new command buffer
+            _device.reset_command_pool( _command_pool );
+            _buffer = _device.allocate_command_buffer( _command_pool );
+            _device.begin_command_buffer( _buffer );
+        }
+
 
     private:
         const core::logical_device< device_functions_t >& _device;

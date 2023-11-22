@@ -128,6 +128,12 @@ namespace sl::vk::spv
             return sets;
         }
 
+        auto collect_local_sizes( const SpvReflectShaderModule& spv_mod )
+        {
+            auto ep = ::spvReflectGetEntryPoint( &spv_mod, spv_mod.entry_point_name );
+            return std::make_tuple( ep->local_size.x, ep->local_size.y, ep->local_size.z );
+        }
+
         auto collect_push_constant_blocks( const SpvReflectShaderModule& spv_mod )
         {
             const auto pc_count   = spv_mod.push_constant_block_count;
@@ -161,11 +167,13 @@ namespace sl::vk::spv
     {
         explicit shader( const char* entry,
                          shader_stage stage,
+                         std::tuple< uint32_t, uint32_t, uint32_t > local_sizes,
                          std::vector< descriptor_set_info >&& descriptor_sets,
                          std::vector< push_constant_block_info >&& push_constant_blocks,
                          std::vector< vertex_input_info >&& vertex_inputs )
             : _entry { entry }
             , _stage { stage }
+            , _local_sizes { local_sizes }
             , _descriptor_sets { std::move( descriptor_sets ) }
             , _push_constant_blocks { std::move( push_constant_blocks ) }
             , _vertex_inputs { std::move( vertex_inputs ) }
@@ -173,6 +181,7 @@ namespace sl::vk::spv
 
         const char* entry() const { return _entry.c_str(); }
         shader_stage stage() const { return _stage; }
+        const auto& local_sizes() const { return _local_sizes; }
 
         auto descriptor_sets() const { return std::span( _descriptor_sets ); }
         auto push_constant_blocks() const { return std::span( _push_constant_blocks ); }
@@ -181,6 +190,7 @@ namespace sl::vk::spv
     private:
         std::string _entry;
         shader_stage _stage;
+        std::tuple< uint32_t, uint32_t, uint32_t > _local_sizes;
 
         std::vector< descriptor_set_info > _descriptor_sets;
         std::vector< push_constant_block_info > _push_constant_blocks;
@@ -205,6 +215,7 @@ namespace sl::vk::spv
         return spv::shader {
             spv_raw.entry_point_name,
             static_cast< shader_stage >( spv_raw.shader_stage ),
+            priv::collect_local_sizes( spv_raw ),
             priv::collect_descriptor_sets( spv_raw ),
             priv::collect_push_constant_blocks( spv_raw ),
             priv::collect_vertex_inputs( spv_raw ),

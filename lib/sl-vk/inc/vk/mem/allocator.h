@@ -47,12 +47,13 @@ namespace sl::vk::mem
          **/
 
         auto create_buffer( VkDeviceSize size,
+                            mem::buffer_type type,
                             VkBufferUsageFlags usage_bits,
                             VmaMemoryUsage memory_usage,
                             VmaAllocationCreateFlags memory_flags = 0 ) const
         {
             return mem::device_buffer {
-                _allocator.get(), size, usage_bits, memory_usage, memory_flags };
+                _allocator.get(), size, type, usage_bits, memory_usage, memory_flags };
         }
 
         auto create_image( uint32_t width,

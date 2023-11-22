@@ -25,6 +25,8 @@
 #ifndef __PROGRAM_H_C74161AFB993442ABDA3F4025844D8CD__
 #define __PROGRAM_H_C74161AFB993442ABDA3F4025844D8CD__
 
+#include <tuple>
+
 #include <vk/compute/context.h>
 #include <vk/spv/shader.h>
 
@@ -38,24 +40,83 @@ namespace sl::vk::compute
             core::shader_module&& shader,
             core::pipeline_layout&& layout,
             core::pipeline&& pipeline,
+            std::tuple< uint32_t, uint32_t, uint32_t > local_size,
             const std::span< core::descriptor_set_layout, k_max_descriptor_sets > set_layouts )
             : _shader { std::move( shader ) }
             , _layout { std::move( layout ) }
             , _pipeline { std::move( pipeline ) }
+            , _local_size { local_size }
+            , _set_count { 0 }
         {
             std::for_each(
-                std::begin( set_layouts ),
-                std::end( set_layouts ),
-                [&, n = 0]( auto& layout ) mutable { _set_layouts[n++] = std::move( layout ); } );
+                std::begin( set_layouts ), std::end( set_layouts ), [&]( auto& layout ) mutable {
+                    if ( !layout )
+                        return;
+
+                    _set_layouts[_set_count] = std::move( layout );
+                    ++_set_count;
+                } );
         }
 
-        void execute() const {}
+
+        /**
+         * Active descriptor set management.
+         **/
+
+        template< typename device_functions_t, typename descriptor_cache_t >
+        void allocate_sets( compute::context< device_functions_t >& ctx, descriptor_cache_t& cache )
+        {
+            // descriptor set layouts must be consecutive in compute shaders, and have
+            // no NULL handles. So, we can assume if we see one, anything after is also
+            // not set.
+            for ( size_t i = 0; i < _set_count; ++i )
+                _sets[i] = ctx.allocate( cache, _set_layouts[i] );
+        }
+
+        void clear_sets() { std::fill( std::begin( _sets ), std::end( _sets ), nullptr ); }
+
+        template< typename device_functions_t >
+        void bind( compute::context< device_functions_t >& ctx,
+                   uint32_t set_index,
+                   uint32_t binding_location,
+                   const mem::device_buffer& buffer )
+        {
+            vk::error::throw_if( set_index >= _set_count,
+                                 "compute-program-bind-buffer",
+                                 VK_ERROR_UNKNOWN,
+                                 "invalid descriptor set index" );
+
+            ctx.update( _sets[set_index], binding_location, buffer );
+        }
+
+
+        /**
+         * Dispatch the program to the GPU for execution.
+         **/
+        template< typename device_functions_t >
+        void execute( compute::context< device_functions_t >& ctx,
+                      uint32_t cx,
+                      uint32_t cy,
+                      uint32_t cz ) const
+        {
+            auto [x, y, z] = _local_size;
+            x              = ( cx + x - 1 ) / x;
+            y              = ( cy + y - 1 ) / y;
+            z              = ( cz + z - 1 ) / z;
+
+            ctx.bind( _pipeline );
+            ctx.bind( _layout, std::span( &_sets[0], _set_count ) );
+            ctx.dispatch( x, y, z );
+        }
 
     private:
         core::shader_module _shader;
         core::pipeline_layout _layout;
         core::pipeline _pipeline;
+        std::tuple< uint32_t, uint32_t, uint32_t > _local_size;
+        size_t _set_count;
         std::array< core::descriptor_set_layout, k_max_descriptor_sets > _set_layouts;
+        std::array< VkDescriptorSet, k_max_descriptor_sets > _sets;
     };
 
 
@@ -121,6 +182,7 @@ namespace sl::vk::compute
             std::move( shader ),
             std::move( layout ),
             std::move( pipeline ),
+            spv_module.local_sizes(),
             set_layouts,
         };
     }

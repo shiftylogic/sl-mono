@@ -135,6 +135,30 @@ namespace sl::vk::core
                                        "failed to begin recording command buffer" );
         }
 
+        inline void end_command_buffer( VkCommandBuffer buffer ) const
+        {
+            vk::error::throw_if_error( "vkEndCommandBuffer",
+                                       _fns.vkEndCommandBuffer( buffer ),
+                                       "failed to record command buffer" );
+        }
+
+        inline void
+        command_bind_descriptor_sets( VkCommandBuffer cmd_buf,
+                                      const core::pipeline_layout& layout,
+                                      const std::span< const VkDescriptorSet > desc_sets,
+                                      VkPipelineBindPoint bind_point ) const
+        {
+            _fns.vkCmdBindDescriptorSets(
+                cmd_buf, bind_point, layout, 0, desc_sets.size(), desc_sets.data(), 0, nullptr );
+        }
+
+        inline void command_bind_pipeline( VkCommandBuffer cmd_buf,
+                                           const core::pipeline& pipeline,
+                                           VkPipelineBindPoint bind_point ) const
+        {
+            _fns.vkCmdBindPipeline( cmd_buf, bind_point, pipeline );
+        }
+
         inline void command_copy_buffer( VkCommandBuffer cmd_buf,
                                          uint32_t size_in_bytes,
                                          VkBuffer source,
@@ -152,10 +176,11 @@ namespace sl::vk::core
         }
 
         inline void
-        command_dispatch( VkCommandBuffer buffer, uint32_t x, uint32_t y, uint32_t z ) const
+        command_dispatch( VkCommandBuffer cmd_buf, uint32_t x, uint32_t y, uint32_t z ) const
         {
-            _fns.vkCmdDispatch( buffer, x, y, z );
+            _fns.vkCmdDispatch( cmd_buf, x, y, z );
         }
+
 
         //---------------------
         // COMMAND POOL
@@ -181,8 +206,66 @@ namespace sl::vk::core
                                        "failed to reset the command pool" );
         }
 
+
+        //---------------------
+        // DESCRIPTOR POOLS
+
+        inline auto
+        create_descriptor_pool( const std::span< const VkDescriptorPoolSize > pool_sizes,
+                                uint32_t max_sets,
+                                VkDescriptorPoolCreateFlags flags = 0
+
+        ) const
+        {
+            auto info          = core::descriptor_pool_create_info {};
+            info.flags         = flags;
+            info.poolSizeCount = pool_sizes.size();
+            info.pPoolSizes    = pool_sizes.data();
+            info.maxSets       = max_sets;
+
+            VkDescriptorPool pool;
+            vk::error::throw_if_error(
+                "vkCreateDescriptorPool",
+                _fns.vkCreateDescriptorPool( _device, &info, nullptr, &pool ),
+                "failed to create descriptor pool" );
+
+            return core::descriptor_pool { _device, pool, _fns.vkDestroyDescriptorPool };
+        }
+
+        inline void reset_descriptor_pool( const core::descriptor_pool& pool ) const
+        {
+            vk::error::throw_if_error( "vkResetDescriptorPool",
+                                       _fns.vkResetDescriptorPool( _device, pool, 0 ),
+                                       "failed to reset the descriptor pool" );
+        }
+
+
         //---------------------
         // DESCRIPTOR SETS
+
+        inline VkDescriptorSet
+        allocate_descriptor_set( const core::descriptor_pool& pool,
+                                 const core::descriptor_set_layout& set_layout ) const
+        {
+            auto layout             = static_cast< VkDescriptorSetLayout >( set_layout );
+            auto info               = core::descriptor_set_allocate_info {};
+            info.descriptorPool     = pool;
+            info.descriptorSetCount = 1;
+            info.pSetLayouts        = &layout;
+
+            VkDescriptorSet set;
+            VkResult res = _fns.vkAllocateDescriptorSets( _device, &info, &set );
+            if ( res == VK_SUCCESS )
+                return set;
+
+            if ( res == VK_ERROR_FRAGMENTED_POOL || res == VK_ERROR_OUT_OF_POOL_MEMORY )
+                return VK_NULL_HANDLE;
+
+            vk::error::throw_if_error(
+                "vkAllocateDescriptorSet", res, "failed to allocate descriptor set" );
+
+            return VK_NULL_HANDLE;
+        }
 
         inline auto create_descriptor_set_layout(
             const std::span< const VkDescriptorSetLayoutBinding > bindings ) const
@@ -200,6 +283,58 @@ namespace sl::vk::core
             return core::descriptor_set_layout {
                 _device, layout, _fns.vkDestroyDescriptorSetLayout };
         }
+
+        inline void update_descriptor_set( VkDescriptorSet desc_set,
+                                           uint32_t binding,
+                                           VkBuffer buffer,
+                                           VkDeviceSize offset,
+                                           VkDeviceSize range,
+                                           VkDescriptorType type ) const
+        {
+            auto info = VkDescriptorBufferInfo {
+                .buffer = buffer,
+                .offset = offset,
+                .range  = range,
+            };
+
+            auto wds            = core::write_descriptor_set {};
+            wds.dstSet          = desc_set;
+            wds.dstBinding      = binding;
+            wds.dstArrayElement = 0;
+            wds.descriptorType  = type;
+            wds.descriptorCount = 1;
+            wds.pBufferInfo     = &info;
+
+            _fns.vkUpdateDescriptorSets( _device, 1, &wds, 0, nullptr );
+        }
+
+
+        //---------------------
+        // FENCES
+
+        inline auto create_fence( bool signaled ) const
+        {
+            auto info  = core::fence_create_info {};
+            info.flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
+
+            VkFence fence;
+            vk::error::throw_if_error( "vkCreateFence",
+                                       _fns.vkCreateFence( _device, &info, nullptr, &fence ),
+                                       "failed to create the device fence" );
+
+            return core::fence { _device, fence, _fns.vkDestroyFence };
+        }
+
+        inline auto wait_for_fences( const std::span< const VkFence > fences,
+                                     bool wait_all    = true,
+                                     uint64_t timeout = UINT64_MAX ) const
+        {
+            vk::error::throw_if_error(
+                "vkWaitForFences",
+                _fns.vkWaitForFences( _device, fences.size(), fences.data(), wait_all, timeout ),
+                "failed to wait for device fences" );
+        }
+
 
         //---------------------
         // PIPELINES
@@ -244,6 +379,44 @@ namespace sl::vk::core
 
             return core::pipeline { _device, pipeline, _fns.vkDestroyPipeline };
         }
+
+
+        //---------------------
+        // QUEUES / DEVICES
+
+        inline void
+        queue_submit( device_queue queue, VkCommandBuffer buffer, const core::fence& fence ) const
+        {
+            VkQueue queue_handle;
+            switch ( queue )
+            {
+            case device_queue::compute:
+                queue_handle = _compute;
+                break;
+            case device_queue::graphics:
+                queue_handle = _graphics;
+                break;
+            case device_queue::transfer:
+                queue_handle = _transfer;
+                break;
+            }
+
+            auto info               = core::submit_info {};
+            info.commandBufferCount = 1U;
+            info.pCommandBuffers    = &buffer;
+
+            vk::error::throw_if_error( "vkQueueSubmit",
+                                       _fns.vkQueueSubmit( queue_handle, 1, &info, fence ),
+                                       "failed to submit command buffers to queue" );
+        }
+
+        inline void wait_idle() const
+        {
+            vk::error::throw_if_error( "vkDeviceWaitIdle",
+                                       _fns.vkDeviceWaitIdle( _device ),
+                                       "failed to wait for device idle state" );
+        }
+
 
         //---------------------
         // SHADERS
